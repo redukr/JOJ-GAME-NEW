@@ -26,6 +26,7 @@ type DeckStats = {
 type SharedDeckTemplate = {
   deck: CardDefinition[];
   legendaryDeck: CardDefinition[];
+  deckBackImage?: string;
 };
 
 type AdminPageProps = {
@@ -49,6 +50,7 @@ type AdminPageProps = {
   onUpdateCard: (target: DeckTarget, index: number, card: CardDefinition) => void;
   onRemoveCard: (target: DeckTarget, index: number) => void;
   onResetTemplate: () => void;
+  onSetDeckBackImage: (path?: string) => void;
   onExportTemplate: () => string;
   onImportTemplate: (json: string) => string | null;
 };
@@ -86,6 +88,7 @@ const blankCard = (): CardDefinition => ({
 
 type ImportCategoryMode = CardCategory | 'AS_IS';
 type CategoryFilter = CardCategory | 'ALL';
+type AdminTab = 'matches' | 'deck' | 'import' | 'state';
 
 type HoverImageProps = {
   src: string;
@@ -125,6 +128,7 @@ export const AdminPage = ({
   onUpdateCard,
   onRemoveCard,
   onResetTemplate,
+  onSetDeckBackImage,
   onExportTemplate,
   onImportTemplate,
 }: AdminPageProps) => {
@@ -161,6 +165,12 @@ export const AdminPage = ({
   const [imagePreviewNonce, setImagePreviewNonce] = useState<number>(0);
   const [restartingServer, setRestartingServer] = useState<boolean>(false);
   const [adminActionError, setAdminActionError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<AdminTab>('matches');
+  const [deckBackImageInput, setDeckBackImageInput] = useState<string>(sharedDeckTemplate.deckBackImage ?? '');
+
+  useEffect(() => {
+    setDeckBackImageInput(sharedDeckTemplate.deckBackImage ?? '');
+  }, [sharedDeckTemplate.deckBackImage]);
 
   const beginEdit = (nextTarget: DeckTarget, index: number, card: CardDefinition) => {
     setEditTarget(nextTarget);
@@ -182,26 +192,26 @@ export const AdminPage = ({
     try {
       parsed = JSON.parse(editEffectsText || '[]');
     } catch {
-      setEditError('Invalid effects JSON');
+      setEditError(t.invalidEffectsJson);
       return null;
     }
     if (!Array.isArray(parsed)) {
-      setEditError('effects must be an array');
+      setEditError(t.effectsMustBeArray);
       return null;
     }
     const effects: NonNullable<CardDefinition['effects']> = [];
     for (const item of parsed) {
       if (!item || typeof item !== 'object') {
-        setEditError('Invalid effect item');
+        setEditError(t.invalidEffectItem);
         return null;
       }
       const row = item as Record<string, unknown>;
       if (typeof row.resource !== 'string' || !effectResourceKeys.includes(row.resource as EffectResource)) {
-        setEditError('Invalid effect.resource');
+        setEditError(t.invalidEffectResource);
         return null;
       }
       if (typeof row.value !== 'number') {
-        setEditError('Invalid effect.value');
+        setEditError(t.invalidEffectValue);
         return null;
       }
       effects.push({ resource: row.resource as EffectResource, value: row.value });
@@ -245,7 +255,7 @@ export const AdminPage = ({
     try {
       parsed = JSON.parse(importJson);
     } catch {
-      setImportError('Invalid JSON');
+      setImportError(t.invalidJson);
       return;
     }
 
@@ -261,7 +271,7 @@ export const AdminPage = ({
 
     const cards = toCardList(parsed);
     if (!cards) {
-      setImportError('JSON must be an array of cards or { deck, legendaryDeck }');
+      setImportError(t.importShapeError);
       return;
     }
 
@@ -274,6 +284,7 @@ export const AdminPage = ({
     const nextTemplate: SharedDeckTemplate = {
       deck: sharedDeckTemplate.deck.map((card) => ({ ...card })),
       legendaryDeck: sharedDeckTemplate.legendaryDeck.map((card) => ({ ...card })),
+      deckBackImage: sharedDeckTemplate.deckBackImage,
       [importTarget]: [...sharedDeckTemplate[importTarget], ...normalizedCards],
     };
 
@@ -304,7 +315,7 @@ export const AdminPage = ({
       reader.readAsDataURL(file);
     });
     if (!dataUrl) {
-      setEditError('Failed to read image file');
+      setEditError(lang === 'uk' ? 'Не вдалося прочитати файл зображення' : 'Failed to read image file');
       return;
     }
     try {
@@ -318,14 +329,14 @@ export const AdminPage = ({
       });
       const payload = (await response.json()) as { path?: string; error?: string };
       if (!response.ok || !payload.path) {
-        setEditError(payload.error ?? 'Upload failed');
+        setEditError(payload.error ?? (lang === 'uk' ? 'Помилка завантаження' : 'Upload failed'));
         return;
       }
       setEditError('');
       setEditCard((prev) => ({ ...prev, image: payload.path }));
       setImagePreviewNonce((v) => v + 1);
     } catch {
-      setEditError('Upload failed');
+      setEditError(lang === 'uk' ? 'Помилка завантаження' : 'Upload failed');
     }
   };
   const importFromFile = (file: File | null) => {
@@ -337,132 +348,72 @@ export const AdminPage = ({
     };
     reader.readAsText(file);
   };
+  const uploadDeckBackImage = async (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    const dataUrl = await new Promise<string>((resolve) => {
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+    if (!dataUrl) {
+      setEditError(lang === 'uk' ? 'Не вдалося прочитати файл зображення' : 'Failed to read image file');
+      return;
+    }
+    try {
+      const response = await fetch('/api/upload-card-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          dataUrl,
+          cardId: 'deck-back',
+        }),
+      });
+      const payload = (await response.json()) as { path?: string; error?: string };
+      if (!response.ok || !payload.path) {
+        setEditError(payload.error ?? (lang === 'uk' ? 'Помилка завантаження' : 'Upload failed'));
+        return;
+      }
+      onSetDeckBackImage(payload.path);
+      setDeckBackImageInput(payload.path);
+      setImagePreviewNonce((v) => v + 1);
+    } catch {
+      setEditError(lang === 'uk' ? 'Помилка завантаження' : 'Upload failed');
+    }
+  };
 
   const withCacheBust = (src: string) => `${src}${src.includes('?') ? '&' : '?'}v=${imagePreviewNonce}`;
   const imageSrc = normalizeImagePath(selectedCard?.image) ?? (selectedCard ? `/cards/${selectedCard.id}.png` : '');
   const getImageSrc = (card: CardDefinition) => normalizeImagePath(card.image) ?? `/cards/${card.id}.png`;
+  const closeEditor = () => {
+    setEditIndex(-1);
+    setEditError('');
+  };
 
-  return (
-    <section className="board admin-panel">
-      <h2>{t.adminTitle}</h2>
-      <p>Path: <code>/admin</code></p>
-      <p>Mode: local</p>
-      <hr />
-      <p>
-        {t.matches}: {matches.length}
-      </p>
-      <p>
-        {t.activeMatch}: <code>{activeMatchId || t.notSelected}</code>
-      </p>
-      <p>
-        {t.createdAt}: {activeMatch ? new Date(activeMatch.createdAt).toLocaleString() : t.notSelected}
-      </p>
-      <p>
-        {t.playerView}:{' '}
-        <select value={playerID} onChange={(e) => onPlayerChange(e.target.value)}>
-          <option value="0">0</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-        </select>
-      </p>
-      <p className="admin-controls">
-        <button type="button" onClick={onCreateMatch}>{t.createMatch}</button>
-        <button type="button" onClick={onResetMatch}>{t.resetMatch}</button>
-        <button type="button" onClick={onDeleteMatch} disabled={matches.length <= 1}>{t.deleteMatch}</button>
-        <button type="button" onClick={onResetAll}>{t.resetAll}</button>
-        <button
-          type="button"
-          onClick={() => {
-            setAdminActionError('');
-            setRestartingServer(true);
-            void onRestartServer().then((ok) => {
-              setRestartingServer(false);
-              if (!ok) setAdminActionError(t.restartServerFailed);
-            });
-          }}
-          disabled={restartingServer}
-        >
-          {restartingServer ? t.restartingServer : t.restartServer}
-        </button>
-      </p>
-      {adminActionError ? <p className="admin-error">{adminActionError}</p> : null}
-
-      <hr />
-      <h3>{t.deckControls}</h3>
-      <p>
-        {t.deckCount}: {deckStats.deck} | {t.discardCount}: {deckStats.discard} | {t.legendaryCount}: {deckStats.legendary}
-      </p>
-      <p className="admin-controls">
-        <select value={target} onChange={(e) => setTarget(e.target.value as DeckTarget)}>
-          <option value="deck">{t.mainDeck}</option>
-          <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
-        </select>
-        <label>
-          {t.categoryFilter}
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}>
-            <option value="ALL">{t.allCategories}</option>
-            {categories.map((cat) => (
-              <option key={`filter-${cat}`} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </label>
-        <select value={selectedCardId} onChange={(e) => setSelectedCardId(e.target.value)}>
-          {filteredCatalog.map((card) => (
-            <option key={card.id} value={card.id}>
-              {card.id} | {cardTitle(card.id, card.title, lang)}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={() => selectedCardId && onAddCard(target, selectedCardId)} disabled={!selectedCardId}>
-          {t.addCardById}
-        </button>
-      </p>
-      {selectedCard ? (
-        <div className="admin-card-preview">
-          <p>
-            <strong>{cardTitle(selectedCard.id, selectedCard.title, lang)}</strong> ({categoryLabel(selectedCard.category, lang)})
-          </p>
-          <HoverImage
-            src={withCacheBust(imageSrc)}
-            alt={cardTitle(selectedCard.id, selectedCard.title, lang)}
-            className="admin-card-preview-image"
-            onLoad={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'block';
-              (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
-            }}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        </div>
-      ) : null}
-      <p className="admin-controls">
-        <button type="button" onClick={onShuffleDeck}>{t.shuffleDeck}</button>
-        <button type="button" onClick={onResetTemplate}>{t.recycleDiscard}</button>
-      </p>
-
+  const inlineEditor = (
+    <div className="admin-inline-editor">
       <h4>{t.cardEditor}</h4>
       <div className="admin-editor-grid">
-        <label>ID<input value={editCard.id} onChange={(e) => setEditCard((prev) => ({ ...prev, id: e.target.value }))} /></label>
-        <label>Title<input value={editCard.title} onChange={(e) => setEditCard((prev) => ({ ...prev, title: e.target.value }))} /></label>
-        <label>Category
+        <label>{t.fieldId}<input value={editCard.id} onChange={(e) => setEditCard((prev) => ({ ...prev, id: e.target.value }))} /></label>
+        <label>{t.fieldTitle}<input value={editCard.title} onChange={(e) => setEditCard((prev) => ({ ...prev, title: e.target.value }))} /></label>
+        <label>{t.fieldCategory}
           <select value={editCard.category} onChange={(e) => setEditCard((prev) => ({ ...prev, category: e.target.value as CardCategory }))}>
             {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
           </select>
         </label>
-        <label>Image URL/Path
+        <label>{t.fieldImagePath}
           <input value={editCard.image ?? ''} onChange={(e) => setEditCard((prev) => ({ ...prev, image: e.target.value }))} />
         </label>
-        <label>Image file
+        <label>{t.fieldImageFile}
           <input type="file" accept="image/*" onChange={(e) => attachImageFile(e.target.files?.[0] ?? null)} />
         </label>
         {editCard.image ? (
-          <label>Image preview
+          <label>{t.fieldImagePreview}
             <HoverImage
               src={withCacheBust(editCard.image)}
               className="admin-thumb"
-              alt="Card preview"
+              alt={t.fieldImagePreview}
               onLoad={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = 'inline-block';
                 (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
@@ -473,7 +424,7 @@ export const AdminPage = ({
             />
           </label>
         ) : null}
-        <label>Quick image path
+        <label>{t.fieldQuickImagePath}
           <span className="admin-controls">
             <button type="button" onClick={() => setEditCard((prev) => ({ ...prev, image: `/cards/${prev.id || 'card-id'}.png` }))}>
               /cards/&lt;id&gt;.png
@@ -483,12 +434,12 @@ export const AdminPage = ({
             </button>
           </span>
         </label>
-        <label>Flavor
+        <label>{t.fieldFlavor}
           <input value={editCard.flavor ?? ''} onChange={(e) => setEditCard((prev) => ({ ...prev, flavor: e.target.value }))} />
         </label>
       </div>
       <label>
-        Effects JSON
+        {t.effectsJson}
         <textarea
           className="admin-textarea"
           value={editEffectsText}
@@ -518,7 +469,7 @@ export const AdminPage = ({
           }}
         />
       </label>
-      <h5>Effects (resource delta)</h5>
+      <h5>{t.effectsDelta}</h5>
       <div className="admin-editor-grid">
         {effectResourceKeys.map((key) => (
           <label key={`effect-${key}`}>{key}
@@ -539,106 +490,262 @@ export const AdminPage = ({
       </div>
       {editError ? <p className="admin-error">{editError}</p> : null}
       <p className="admin-controls">
-        <button type="button" onClick={saveEdit} disabled={editIndex < 0}>{t.saveCard}</button>
+        <button type="button" onClick={saveEdit}>{t.saveCard}</button>
         <button type="button" onClick={addFromForm}>{t.addCustomCard}</button>
+        <button type="button" onClick={closeEditor}>{t.close}</button>
       </p>
+    </div>
+  );
 
-      <div className="admin-deck-list">
-        <h4>{t.mainDeck}</h4>
-        <ul>
-          {sharedDeckTemplate.deck.map((card, index) => (
-            <li key={`deck-${index}-${card.id}`}>
-              <span>
-                <HoverImage
-                  src={withCacheBust(getImageSrc(card))}
-                  className="admin-thumb"
-                  alt={card.id}
-                  onLoad={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
-                    (e.currentTarget as HTMLImageElement).style.display = 'inline-block';
-                  }}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
-                  }}
-                />
-                {index + 1}. {card.id} | {cardTitle(card.id, card.title, lang)}{card.effects?.length ? ` | effects: ${card.effects.length}` : ''}
-              </span>
-              <span className="admin-controls">
-                <button type="button" onClick={() => beginEdit('deck', index, card)}>{t.editCard}</button>
-                <button type="button" onClick={() => onRemoveCard('deck', index)}>{t.removeCard}</button>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        <h4>{t.legendaryDeckLabel}</h4>
-        <ul>
-          {sharedDeckTemplate.legendaryDeck.map((card, index) => (
-            <li key={`legendary-${index}-${card.id}`}>
-              <span>
-                <HoverImage
-                  src={withCacheBust(getImageSrc(card))}
-                  className="admin-thumb"
-                  alt={card.id}
-                  onLoad={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
-                    (e.currentTarget as HTMLImageElement).style.display = 'inline-block';
-                  }}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
-                  }}
-                />
-                {index + 1}. {card.id} | {cardTitle(card.id, card.title, lang)}{card.effects?.length ? ` | effects: ${card.effects.length}` : ''}
-              </span>
-              <span className="admin-controls">
-                <button type="button" onClick={() => beginEdit('legendaryDeck', index, card)}>{t.editCard}</button>
-                <button type="button" onClick={() => onRemoveCard('legendaryDeck', index)}>{t.removeCard}</button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <hr />
-      <h3>{t.importExport}</h3>
+  return (
+    <section className="board admin-panel">
+      <h2>{t.adminTitle}</h2>
+      <p>{t.adminPath}: <code>/admin</code></p>
+      <p>{t.adminMode}: {t.adminModeLocal}</p>
       <p className="admin-controls">
-        <button type="button" onClick={exportToFile}>{t.exportJson}</button>
-        <label>
-          {t.importToDeck}
-          <select value={importTarget} onChange={(e) => setImportTarget(e.target.value as DeckTarget)}>
-            <option value="deck">{t.mainDeck}</option>
-            <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
-          </select>
-        </label>
-        <label>
-          {t.importCategoryLabel}
-          <select
-            value={importCategoryMode}
-            onChange={(e) => setImportCategoryMode(e.target.value as ImportCategoryMode)}
-          >
-            <option value="AS_IS">{t.importCategoryAsIs}</option>
-            {categories.map((cat) => (
-              <option key={`import-cat-${cat}`} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={runImport}>{t.importJson}</button>
-        <label>
-          {t.importFile}
-          <input type="file" accept="application/json,.json" onChange={(e) => importFromFile(e.target.files?.[0] ?? null)} />
-        </label>
+        <button type="button" onClick={() => setActiveTab('matches')} disabled={activeTab === 'matches'}>{t.tabMatches}</button>
+        <button type="button" onClick={() => setActiveTab('deck')} disabled={activeTab === 'deck'}>{t.tabDeck}</button>
+        <button type="button" onClick={() => setActiveTab('import')} disabled={activeTab === 'import'}>{t.tabImportExport}</button>
+        <button type="button" onClick={() => setActiveTab('state')} disabled={activeTab === 'state'}>{t.tabState}</button>
       </p>
-      {importError ? <p className="admin-error">{importError}</p> : null}
-      <textarea className="admin-textarea" value={importJson} onChange={(e) => setImportJson(e.target.value)} />
-
       <hr />
-      <h3>{t.stateSnapshot}</h3>
-      <p>
-        {t.updatedAt}: {snapshot ? new Date(snapshot.updatedAt).toLocaleString() : t.notSelected}
-      </p>
-      <pre className="admin-json">
-        {snapshot ? JSON.stringify({ G: snapshot.G, ctx: snapshot.ctx }, null, 2) : t.noStateYet}
-      </pre>
+      {activeTab === 'matches' ? (
+        <>
+          <p>
+            {t.matches}: {matches.length}
+          </p>
+          <p>
+            {t.activeMatch}: <code>{activeMatchId || t.notSelected}</code>
+          </p>
+          <p>
+            {t.createdAt}: {activeMatch ? new Date(activeMatch.createdAt).toLocaleString() : t.notSelected}
+          </p>
+          <p>
+            {t.playerView}:{' '}
+            <select value={playerID} onChange={(e) => onPlayerChange(e.target.value)}>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </p>
+          <p className="admin-controls">
+            <button type="button" onClick={onCreateMatch}>{t.createMatch}</button>
+            <button type="button" onClick={onResetMatch}>{t.resetMatch}</button>
+            <button type="button" onClick={onDeleteMatch} disabled={matches.length <= 1}>{t.deleteMatch}</button>
+            <button type="button" onClick={onResetAll}>{t.resetAll}</button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminActionError('');
+                setRestartingServer(true);
+                void onRestartServer().then((ok) => {
+                  setRestartingServer(false);
+                  if (!ok) setAdminActionError(t.restartServerFailed);
+                });
+              }}
+              disabled={restartingServer}
+            >
+              {restartingServer ? t.restartingServer : t.restartServer}
+            </button>
+          </p>
+          {adminActionError ? <p className="admin-error">{adminActionError}</p> : null}
+        </>
+      ) : null}
+
+      {activeTab === 'deck' ? (
+        <>
+          <h3>{t.deckControls}</h3>
+          <p>
+            {t.deckCount}: {deckStats.deck} | {t.discardCount}: {deckStats.discard} | {t.legendaryCount}: {deckStats.legendary}
+          </p>
+          <p className="admin-controls">
+            <select value={target} onChange={(e) => setTarget(e.target.value as DeckTarget)}>
+              <option value="deck">{t.mainDeck}</option>
+              <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
+            </select>
+            <label>
+              {t.categoryFilter}
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}>
+                <option value="ALL">{t.allCategories}</option>
+                {categories.map((cat) => (
+                  <option key={`filter-${cat}`} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </label>
+            <select value={selectedCardId} onChange={(e) => setSelectedCardId(e.target.value)}>
+              {filteredCatalog.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.id} | {cardTitle(card.id, card.title, lang)}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => selectedCardId && onAddCard(target, selectedCardId)} disabled={!selectedCardId}>
+              {t.addCardById}
+            </button>
+          </p>
+          {selectedCard ? (
+            <div className="admin-card-preview">
+              <p>
+                <strong>{cardTitle(selectedCard.id, selectedCard.title, lang)}</strong> ({categoryLabel(selectedCard.category, lang)})
+              </p>
+              <HoverImage
+                src={withCacheBust(imageSrc)}
+                alt={cardTitle(selectedCard.id, selectedCard.title, lang)}
+                className="admin-card-preview-image"
+                onLoad={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'block';
+                  (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          ) : null}
+          <p className="admin-controls">
+            <button type="button" onClick={onShuffleDeck}>{t.shuffleDeck}</button>
+            <button type="button" onClick={onResetTemplate}>{t.recycleDiscard}</button>
+          </p>
+          <p className="admin-controls">
+            <label>
+              {t.deckBackImageLabel}
+              <input
+                value={deckBackImageInput}
+                onChange={(e) => setDeckBackImageInput(e.target.value)}
+                placeholder="/cards/deck-back.png"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => onSetDeckBackImage(deckBackImageInput)}
+            >
+              {t.saveCard}
+            </button>
+            <label>
+              {t.deckBackImageFile}
+              <input type="file" accept="image/*" onChange={(e) => uploadDeckBackImage(e.target.files?.[0] ?? null)} />
+            </label>
+            <button type="button" onClick={() => onSetDeckBackImage(undefined)}>
+              {t.clearDeckBackImage}
+            </button>
+          </p>
+          {sharedDeckTemplate.deckBackImage ? (
+            <div className="admin-card-preview">
+              <HoverImage
+                src={withCacheBust(sharedDeckTemplate.deckBackImage)}
+                alt={t.deckBackImageLabel}
+                className="admin-card-preview-image"
+              />
+            </div>
+          ) : null}
+
+          <div className="admin-deck-list">
+            <h4>{t.mainDeck}</h4>
+            <ul>
+              {sharedDeckTemplate.deck.map((card, index) => (
+                <li key={`deck-${index}-${card.id}`}>
+                  <span>
+                    <HoverImage
+                      src={withCacheBust(getImageSrc(card))}
+                      className="admin-thumb"
+                      alt={card.id}
+                      onLoad={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
+                        (e.currentTarget as HTMLImageElement).style.display = 'inline-block';
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                      }}
+                    />
+                    {index + 1}. {card.id} | {cardTitle(card.id, card.title, lang)}{card.effects?.length ? ` | effects: ${card.effects.length}` : ''}
+                  </span>
+                  <span className="admin-controls">
+                    <button type="button" onClick={() => beginEdit('deck', index, card)}>{t.editCard}</button>
+                    <button type="button" onClick={() => onRemoveCard('deck', index)}>{t.removeCard}</button>
+                  </span>
+                  {editTarget === 'deck' && editIndex === index ? inlineEditor : null}
+                </li>
+              ))}
+            </ul>
+
+            <h4>{t.legendaryDeckLabel}</h4>
+            <ul>
+              {sharedDeckTemplate.legendaryDeck.map((card, index) => (
+                <li key={`legendary-${index}-${card.id}`}>
+                  <span>
+                    <HoverImage
+                      src={withCacheBust(getImageSrc(card))}
+                      className="admin-thumb"
+                      alt={card.id}
+                      onLoad={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility = 'visible';
+                        (e.currentTarget as HTMLImageElement).style.display = 'inline-block';
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                      }}
+                    />
+                    {index + 1}. {card.id} | {cardTitle(card.id, card.title, lang)}{card.effects?.length ? ` | effects: ${card.effects.length}` : ''}
+                  </span>
+                  <span className="admin-controls">
+                    <button type="button" onClick={() => beginEdit('legendaryDeck', index, card)}>{t.editCard}</button>
+                    <button type="button" onClick={() => onRemoveCard('legendaryDeck', index)}>{t.removeCard}</button>
+                  </span>
+                  {editTarget === 'legendaryDeck' && editIndex === index ? inlineEditor : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === 'import' ? (
+        <>
+          <h3>{t.importExport}</h3>
+          <p className="admin-controls">
+            <button type="button" onClick={exportToFile}>{t.exportJson}</button>
+            <label>
+              {t.importToDeck}
+              <select value={importTarget} onChange={(e) => setImportTarget(e.target.value as DeckTarget)}>
+                <option value="deck">{t.mainDeck}</option>
+                <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
+              </select>
+            </label>
+            <label>
+              {t.importCategoryLabel}
+              <select
+                value={importCategoryMode}
+                onChange={(e) => setImportCategoryMode(e.target.value as ImportCategoryMode)}
+              >
+                <option value="AS_IS">{t.importCategoryAsIs}</option>
+                {categories.map((cat) => (
+                  <option key={`import-cat-${cat}`} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={runImport}>{t.importJson}</button>
+            <label>
+              {t.importFile}
+              <input type="file" accept="application/json,.json" onChange={(e) => importFromFile(e.target.files?.[0] ?? null)} />
+            </label>
+          </p>
+          {importError ? <p className="admin-error">{importError}</p> : null}
+          <textarea className="admin-textarea" value={importJson} onChange={(e) => setImportJson(e.target.value)} />
+        </>
+      ) : null}
+
+      {activeTab === 'state' ? (
+        <>
+          <h3>{t.stateSnapshot}</h3>
+          <p>
+            {t.updatedAt}: {snapshot ? new Date(snapshot.updatedAt).toLocaleString() : t.notSelected}
+          </p>
+          <pre className="admin-json">
+            {snapshot ? JSON.stringify({ G: snapshot.G, ctx: snapshot.ctx }, null, 2) : t.noStateYet}
+          </pre>
+        </>
+      ) : null}
       <p>
         <a href="/">{t.openGame}</a>
       </p>

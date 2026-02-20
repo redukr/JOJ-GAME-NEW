@@ -40,6 +40,15 @@ export interface JOJState {
   deck: Card[];
   discard: Card[];
   legendaryDeck: Card[];
+  deckBackImage?: string;
+  playerNames: Record<string, string>;
+  chat: Array<{
+    id: string;
+    type: 'player' | 'system';
+    text: string;
+    playerID?: string;
+    createdAt: number;
+  }>;
   players: Record<string, PlayerState>;
   hands: Record<string, Card[]>;
   ranks: Record<string, string>;

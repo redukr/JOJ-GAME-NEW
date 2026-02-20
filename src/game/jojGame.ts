@@ -8,8 +8,16 @@ const STARTING_HAND_SIZE = 5;
 const HAND_LIMIT = 8;
 const DRAW_STAGE = 'draw';
 const PLAY_STAGE = 'play';
+const CHAT_LIMIT = 200;
 
 const resourceKeys: ResourceKey[] = ['time', 'reputation', 'discipline', 'documents', 'tech'];
+const resourceLabelsUk: Record<ResourceKey, string> = {
+  time: 'Час',
+  reputation: 'Авторитет',
+  discipline: 'Дисципліна',
+  documents: 'Документи',
+  tech: 'Технології',
+};
 
 export const normalizeImagePath = (input?: string): string | undefined => {
   if (!input) return undefined;
@@ -33,9 +41,27 @@ const cloneCard = (card: CardDefinition): CardDefinition => ({
   effects: card.effects?.map((effect) => ({ ...effect })),
 });
 
+const getPlayerLabel = (G: JojGameState, playerID: string) => G.playerNames[playerID] || `Гравець #${playerID}`;
+
+const appendChat = (
+  G: JojGameState,
+  entry: { type: 'player' | 'system'; text: string; playerID?: string },
+) => {
+  const row = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: Date.now(),
+    ...entry,
+  };
+  G.chat.push(row);
+  if (G.chat.length > CHAT_LIMIT) {
+    G.chat = G.chat.slice(-CHAT_LIMIT);
+  }
+};
+
 type SharedDeckTemplate = {
   deck: CardDefinition[];
   legendaryDeck: CardDefinition[];
+  deckBackImage?: string;
 };
 
 export type DeckTarget = keyof SharedDeckTemplate;
@@ -43,6 +69,7 @@ export type DeckTarget = keyof SharedDeckTemplate;
 const defaultSharedDeckTemplate = (): SharedDeckTemplate => ({
   deck: baseDeck.map(cloneCard),
   legendaryDeck: legendaryCards.map(cloneCard),
+  deckBackImage: undefined,
 });
 
 let sharedDeckTemplate: SharedDeckTemplate = defaultSharedDeckTemplate();
@@ -65,6 +92,7 @@ export const getSharedDeckTemplateStats = () => ({
 export const getSharedDeckTemplate = (): SharedDeckTemplate => ({
   deck: sharedDeckTemplate.deck.map(cloneCard),
   legendaryDeck: sharedDeckTemplate.legendaryDeck.map(cloneCard),
+  deckBackImage: sharedDeckTemplate.deckBackImage,
 });
 
 export const getCardCatalog = (): CardDefinition[] => buildCardCatalog(sharedDeckTemplate);
@@ -145,10 +173,14 @@ export const importSharedDeckTemplateJson = (
   }
   const typedDeck = deck as CardDefinition[];
   const typedLegendaryDeck = legendaryDeck as CardDefinition[];
+  const deckBackImage = normalizeImagePath(
+    typeof raw.deckBackImage === 'string' ? raw.deckBackImage : undefined,
+  );
 
   sharedDeckTemplate = {
     deck: typedDeck.map(cloneCard),
     legendaryDeck: typedLegendaryDeck.map(cloneCard),
+    deckBackImage,
   };
   return { ok: true };
 };
@@ -161,6 +193,13 @@ export const shuffleSharedDeckTemplate = () => {
   sharedDeckTemplate = {
     ...sharedDeckTemplate,
     deck: shuffle(sharedDeckTemplate.deck),
+  };
+};
+
+export const setSharedDeckBackImage = (path?: string) => {
+  sharedDeckTemplate = {
+    ...sharedDeckTemplate,
+    deckBackImage: normalizeImagePath(path),
   };
 };
 
@@ -310,6 +349,49 @@ const applyCardEffects = (
   return true;
 };
 
+const applyCardEffectsSoft = (
+  G: JojGameState,
+  playerID: string,
+  effects: CardDefinition['effects'],
+): { resources: Partial<Record<ResourceKey, number>>; rank: number } => {
+  const summary: { resources: Partial<Record<ResourceKey, number>>; rank: number } = { resources: {}, rank: 0 };
+  if (!effects?.length) return summary;
+  const resources = G.resources[playerID];
+  effects.forEach((effect) => {
+    if (effect.resource === 'rank') return;
+    if (effect.value < 0) {
+      const next = Math.max(0, resources[effect.resource] + effect.value);
+      const delta = next - resources[effect.resource];
+      resources[effect.resource] = next;
+      summary.resources[effect.resource] = (summary.resources[effect.resource] ?? 0) + delta;
+      return;
+    }
+    resources[effect.resource] += effect.value;
+    summary.resources[effect.resource] = (summary.resources[effect.resource] ?? 0) + effect.value;
+  });
+  effects.forEach((effect) => {
+    if (effect.resource === 'rank') {
+      shiftRank(G, playerID, effect.value);
+      summary.rank += effect.value;
+    }
+  });
+  return summary;
+};
+
+const effectSummaryToText = (summary: { resources: Partial<Record<ResourceKey, number>>; rank: number }) => {
+  const parts: string[] = [];
+  resourceKeys.forEach((key) => {
+    const value = summary.resources[key] ?? 0;
+    if (value !== 0) {
+      parts.push(`${resourceLabelsUk[key]} ${value > 0 ? `+${value}` : value}`);
+    }
+  });
+  if (summary.rank !== 0) {
+    parts.push(`Звання ${summary.rank > 0 ? `+${summary.rank}` : summary.rank}`);
+  }
+  return parts.length > 0 ? parts.join(', ') : 'без змін';
+};
+
 const drawCards = (G: JojGameState, playerID: string, amount: number): void => {
   for (let i = 0; i < amount; i += 1) {
     if (G.deck.length === 0) break;
@@ -367,6 +449,9 @@ export const jojGame: Game<JojGameState> = {
       deck,
       discard: [],
       legendaryDeck: shuffle(sharedDeckTemplate.legendaryDeck.map(cloneCard)),
+      deckBackImage: sharedDeckTemplate.deckBackImage,
+      playerNames: {},
+      chat: [],
       players: {},
       hands: {},
       ranks: {},
@@ -388,6 +473,7 @@ export const jojGame: Game<JojGameState> = {
         rankId: state.ranks[playerID],
         resources: state.resources[playerID],
       };
+      state.playerNames[playerID] = `Гравець #${playerID}`;
       drawCards(state, playerID, STARTING_HAND_SIZE);
     });
 
@@ -400,6 +486,26 @@ export const jojGame: Game<JojGameState> = {
     },
   },
   moves: {
+    setPlayerName: (args, name: string) => {
+      const playerID = args.playerID;
+      if (!playerID) return INVALID_MOVE;
+      const trimmed = name.trim();
+      if (!trimmed) return INVALID_MOVE;
+      args.G.playerNames[playerID] = trimmed.slice(0, 32);
+      return undefined;
+    },
+    sendChat: (args, text: string) => {
+      const playerID = args.playerID;
+      if (!playerID) return INVALID_MOVE;
+      const trimmed = text.trim();
+      if (!trimmed) return INVALID_MOVE;
+      appendChat(args.G, {
+        type: 'player',
+        playerID,
+        text: trimmed.slice(0, 280),
+      });
+      return undefined;
+    },
     drawCard: (args) => {
       const playerID = args.playerID;
       if (!playerID || args.ctx.currentPlayer !== playerID) return INVALID_MOVE;
@@ -407,10 +513,42 @@ export const jojGame: Game<JojGameState> = {
 
       const hand = args.G.hands[playerID];
       if (hand.length >= HAND_LIMIT) return INVALID_MOVE;
-
-      drawCards(args.G, playerID, 1);
+      let autoPlayed = false;
+      const card = args.G.deck.pop();
+      if (card) {
+        if (card.category === 'LYAP') {
+          // Drawn LYAP auto-triggers on the player who drew it.
+          const summary = applyCardEffectsSoft(args.G, playerID, card.effects);
+          appendChat(args.G, {
+            type: 'system',
+            text: `⚠️ ${getPlayerLabel(args.G, playerID)} витягнув ЛЯП «${card.title}». Система посміхнулась і нарахувала: ${effectSummaryToText(summary)}.`,
+          });
+          args.G.discard.push(card);
+          autoPlayed = true;
+        } else if (card.category === 'SCANDAL') {
+          // Drawn SCANDAL auto-triggers on all players at the table.
+          const targetSummaries: string[] = [];
+          Object.keys(args.G.players).forEach((pid) => {
+            const summary = applyCardEffectsSoft(args.G, pid, card.effects);
+            targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
+            syncPlayerState(args.G, pid);
+          });
+          appendChat(args.G, {
+            type: 'system',
+            text: `🗞️ ${getPlayerLabel(args.G, playerID)} витягнув СКАНДАЛ «${card.title}». Грянув загальний розбір польотів: ${targetSummaries.join(' | ')}.`,
+          });
+          args.G.discard.push(card);
+          autoPlayed = true;
+        } else {
+          hand.push(card);
+        }
+      }
       syncPlayerState(args.G, playerID);
-      args.events?.setStage(PLAY_STAGE);
+      if (autoPlayed) {
+        args.events?.endTurn();
+      } else {
+        args.events?.setStage(PLAY_STAGE);
+      }
       return undefined;
     },
     playCard: (args, cardId: string, replacementResources: ResourceKey[] = []) => {

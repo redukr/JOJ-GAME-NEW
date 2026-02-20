@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
 import type { JojGameState, ResourceKey } from '../game/types';
 import { getReplacementUnitsForCard, normalizeImagePath } from '../game/jojGame';
@@ -7,13 +7,14 @@ import { cardTitle, categoryLabel, rankLabel, text } from './i18n';
 
 type LocalizedBoardProps = BoardProps<JojGameState> & {
   lang?: Language;
+  playerName?: string;
   onStateChange?: (payload: {
     G: JojGameState;
     ctx: unknown;
   }) => void;
 };
 
-export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: LocalizedBoardProps) => {
+export const Board = ({ G, ctx, moves, playerID, lang = 'uk', playerName = '', onStateChange }: LocalizedBoardProps) => {
   const t = text(lang);
   const resourceLabels: Record<ResourceKey, string> = t.resources;
   const id = playerID ?? '0';
@@ -25,8 +26,13 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
   const stage = ctx?.activePlayers?.[id];
   const canDraw = isCurrentPlayer && stage === 'draw';
   const canPlay = isCurrentPlayer && stage === 'play';
+  const deckBackImage = G?.deckBackImage ? normalizeImagePath(G.deckBackImage) : undefined;
+  const lastDiscard = G?.discard?.length ? G.discard[G.discard.length - 1] : null;
   const effectLabel = (resource: ResourceKey | 'rank') =>
     resource === 'rank' ? (lang === 'uk' ? 'Звання' : 'Rank') : resourceLabels[resource];
+  const [chatInput, setChatInput] = useState<string>('');
+  const syncedNameRef = useRef<string>('');
+  const chatLogRef = useRef<HTMLDivElement | null>(null);
   const promptReplacementResources = (required: number): ResourceKey[] | null => {
     const options: ResourceKey[] = ['time', 'reputation', 'discipline', 'documents', 'tech'];
     const aliases: Record<string, ResourceKey> = {
@@ -74,6 +80,28 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
     });
   }, [G, ctx, onStateChange, playerID]);
 
+  useEffect(() => {
+    if (!playerID || !playerName.trim() || typeof moves.setPlayerName !== 'function') return;
+    const trimmed = playerName.trim();
+    if (syncedNameRef.current === trimmed) return;
+    moves.setPlayerName(trimmed);
+    syncedNameRef.current = trimmed;
+  }, [moves, playerID, playerName]);
+
+  useEffect(() => {
+    if (!chatLogRef.current) return;
+    chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+  }, [G?.chat?.length]);
+
+  const sendChatMessage = () => {
+    const text = chatInput.trim();
+    if (!text) return;
+    if (typeof moves.sendChat === 'function') {
+      moves.sendChat(text);
+    }
+    setChatInput('');
+  };
+
   if (!G || !ctx || !resources) {
     return (
       <section className="board">
@@ -83,11 +111,51 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
   }
 
   return (
-    <section className="board">
+    <section className="board board-layout">
+      <div className="board-main">
       <p>{t.currentPlayer}: {ctx.currentPlayer}</p>
       <p>{t.turnStage}: {stage === 'draw' ? t.stageDraw : stage === 'play' ? t.stagePlay : t.stageWaiting}</p>
       <p>{t.yourRank}: {rankName}</p>
       <p>{t.cardsInDeck}: {G.deck?.length ?? 0}</p>
+
+      <h2>{t.boardArea}</h2>
+      <div className="play-area">
+        <div className="pile">
+          <p>{t.drawPile} ({G.deck?.length ?? 0})</p>
+          <div className="pile-card">
+            {deckBackImage ? (
+              <img src={deckBackImage} alt={t.drawPile} />
+            ) : (
+              <div className="pile-back-fallback">JOJ</div>
+            )}
+          </div>
+        </div>
+        <div className="pile">
+          <p>{t.discardPile} ({G.discard?.length ?? 0})</p>
+          <div className="pile-card">
+            {lastDiscard ? (
+              <div className="pile-preview">
+                <img
+                  src={normalizeImagePath(lastDiscard.image) ?? `/cards/${lastDiscard.id}.png`}
+                  alt={cardTitle(lastDiscard.id, lastDiscard.title, lang)}
+                />
+                <div className="game-card-popover" aria-hidden="true">
+                  <img
+                    src={normalizeImagePath(lastDiscard.image) ?? `/cards/${lastDiscard.id}.png`}
+                    alt={cardTitle(lastDiscard.id, lastDiscard.title, lang)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="pile-empty">{t.noCardsInDiscard}</div>
+            )}
+          </div>
+          <p>
+            {t.lastPlayedCard}:{' '}
+            {lastDiscard ? cardTitle(lastDiscard.id, lastDiscard.title, lang) : t.noCardsInDiscard}
+          </p>
+        </div>
+      </div>
 
       <div className="resources">
         {Object.entries(resourceLabels).map(([key, label]) => (
@@ -162,6 +230,40 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
       </button>
 
       {ctx.gameover ? <p className="gameover">{t.winner}: {String(ctx.gameover.winner)}</p> : null}
+      </div>
+      <aside className="board-chat">
+        <h3>{t.chatTitle}</h3>
+        <div className="chat-log" ref={chatLogRef}>
+          {(G.chat ?? []).map((row) => {
+            const author = row.type === 'system'
+              ? t.systemTag
+              : (row.playerID ? (G.playerNames?.[row.playerID] ?? `#${row.playerID}`) : '#');
+            return (
+              <p key={row.id} className={row.type === 'system' ? 'chat-system' : 'chat-player'}>
+                <strong>{author}:</strong> {row.text}
+              </p>
+            );
+          })}
+        </div>
+        <form
+          className="chat-input-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendChatMessage();
+          }}
+        >
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder={t.chatPlaceholder}
+          />
+          <button
+            type="submit"
+          >
+            {t.sendMessage}
+          </button>
+        </form>
+      </aside>
     </section>
   );
 };

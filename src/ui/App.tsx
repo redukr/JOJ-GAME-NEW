@@ -15,6 +15,7 @@ import {
   jojGame,
   removeCardAtFromSharedDeckTemplate,
   resetSharedDeckTemplate,
+  setSharedDeckBackImage,
   shuffleSharedDeckTemplate,
   updateCardAtInSharedDeckTemplate,
 } from '../game/jojGame';
@@ -55,6 +56,7 @@ type LobbyMatch = {
 type SharedDeckTemplate = {
   deck: CardDefinition[];
   legendaryDeck: CardDefinition[];
+  deckBackImage?: string;
 };
 
 type Session = {
@@ -96,6 +98,7 @@ export const App = () => {
   const [session, setSession] = useState<Session | null>(() => parseSession(window.localStorage.getItem(SESSION_STORAGE_KEY)));
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [matchesSynced, setMatchesSynced] = useState<boolean>(false);
 
   const [, setSharedDeckVersion] = useState<number>(0);
   const [sharedDeckTemplate, setSharedDeckTemplate] = useState<SharedDeckTemplate>(getSharedDeckTemplate);
@@ -153,6 +156,7 @@ export const App = () => {
     try {
       const response = (await lobbyClient.listMatches(GAME_NAME)) as { matches: LobbyMatch[] };
       setMatches(response.matches ?? []);
+      setMatchesSynced(true);
     } catch {
       setError(t.serverUnavailable);
     } finally {
@@ -252,7 +256,7 @@ export const App = () => {
   );
 
   const canStart = Boolean(activeMatch && activeMatch.players.every((player) => Boolean(player.name)));
-  const sessionBroken = Boolean(session && !activeMatch && !loading);
+  const sessionBroken = Boolean(session && matchesSynced && !activeMatch && !loading);
 
   useEffect(() => {
     void (async () => {
@@ -387,6 +391,7 @@ export const App = () => {
             playerID={session.playerID}
             credentials={session.credentials}
             lang={lang}
+            playerName={playerName}
           />
         ) : null}
       </div>
@@ -450,6 +455,10 @@ export const App = () => {
           }}
           onResetTemplate={() => {
             resetSharedDeckTemplate();
+            refreshSharedDeckTemplate();
+          }}
+          onSetDeckBackImage={(path?: string) => {
+            setSharedDeckBackImage(path);
             refreshSharedDeckTemplate();
           }}
           onExportTemplate={() => exportSharedDeckTemplateJson()}
