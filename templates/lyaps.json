@@ -1,0 +1,309 @@
+{
+  "deck": [
+    {
+      "id": "lyap-01",
+      "title": "Журнал обліку журналів",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "time",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Без журналу журналів немає контролю над журналами.",
+      "image": "/cards/lyap-01.png"
+    },
+    {
+      "id": "lyap-02",
+      "title": "Три сантиметри відступу",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        }
+      ],
+      "flavor": "Не той формат — не той командир.",
+      "image": "/cards/lyap-02.png"
+    },
+    {
+      "id": "lyap-03",
+      "title": "Кава на журналі обліку",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Пляма на аркуші — клеймо на репутації.",
+      "image": "/cards/lyap-03.png"
+    },
+    {
+      "id": "lyap-04",
+      "title": "Загублений бланк №27",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Бланк пішов у поле. Назавжди.",
+      "image": "/cards/lyap-04.png"
+    },
+    {
+      "id": "lyap-05",
+      "title": "План евакуації з орфографічною помилкою",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        }
+      ],
+      "flavor": "Евакуація починається з граматики.",
+      "image": "/cards/lyap-05.png"
+    },
+    {
+      "id": "lyap-06",
+      "title": "П’ять нарад за один день",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "time",
+          "value": -2
+        }
+      ],
+      "flavor": "Те саме рішення, тільки з різними печатками.",
+      "image": "/cards/lyap-06.png"
+    },
+    {
+      "id": "lyap-07",
+      "title": "Підпис за відсутнього начальника",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Головне — щоб почерк схожий.",
+      "image": "/cards/lyap-07.png"
+    },
+    {
+      "id": "lyap-08",
+      "title": "Фотозвіт без фото",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "tech",
+          "value": -1
+        }
+      ],
+      "flavor": "Головне — підписати, що фото були.",
+      "image": "/cards/lyap-08.png"
+    },
+    {
+      "id": "lyap-09",
+      "title": "Плутанина з печатками",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -1
+        },
+        {
+          "resource": "time",
+          "value": -1
+        }
+      ],
+      "flavor": "Три печатки — і всі не ті.",
+      "image": "/cards/lyap-09.png"
+    },
+    {
+      "id": "lyap-10",
+      "title": "Карта-схема загублена у Google Maps",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "tech",
+          "value": -1
+        }
+      ],
+      "flavor": "Координати зникли в реальному часі.",
+      "image": "/cards/lyap-10.png"
+    },
+    {
+      "id": "lyap-11",
+      "title": "Плутанина з особовими справами",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Один Іван — три особові.",
+      "image": "/cards/lyap-11.png"
+    },
+    {
+      "id": "lyap-12",
+      "title": "Рапорт на ім’я іншого командира",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -1
+        }
+      ],
+      "flavor": "Адресат здивований, система — ні.",
+      "image": "/cards/lyap-12.png"
+    },
+    {
+      "id": "lyap-13",
+      "title": "Неправильна дата у наказі",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        }
+      ],
+      "flavor": "Минуле не виправиш. Але можна перепідписати.",
+      "image": "/cards/lyap-13.png"
+    },
+    {
+      "id": "lyap-14",
+      "title": "Втрачений журнал",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "documents",
+          "value": -2
+        }
+      ],
+      "flavor": "Журнал на завданні. Повернеться з перемогою.",
+      "image": "/cards/lyap-14.png"
+    },
+    {
+      "id": "lyap-15",
+      "title": "Подвійна звітність",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "time",
+          "value": -1
+        }
+      ],
+      "flavor": "Два рази звітуй — і все одно не так.",
+      "image": "/cards/lyap-15.png"
+    },
+    {
+      "id": "lyap-16",
+      "title": "Рапорт без дати",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -1
+        }
+      ],
+      "flavor": "Слова є, часу немає.",
+      "image": "/cards/lyap-16.png"
+    },
+    {
+      "id": "lyap-17",
+      "title": "Неправильний шрифт у наказі",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        }
+      ],
+      "flavor": "Arial проти Times — класика службових воєн.",
+      "image": "/cards/lyap-17.png"
+    },
+    {
+      "id": "lyap-18",
+      "title": "Майте повагу до звання",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "rank",
+          "value": -1
+        }
+      ],
+      "flavor": "Коли звертаєшся неправильно — втрачаєш не лише бал, а й майбутнє підвищення.",
+      "image": "/cards/lyap-18.png"
+    },
+    {
+      "id": "lyap-19",
+      "title": "СЗЧ",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -2
+        },
+        {
+          "resource": "time",
+          "value": 1
+        }
+      ],
+      "flavor": "Іноді найкращий спосіб відпочити — піти за кавою… на два дні.",
+      "image": "/cards/lyap-19.png"
+    },
+    {
+      "id": "lyap-20",
+      "title": "Задувка",
+      "category": "LYAP",
+      "cost": {},
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -2
+        },
+        {
+          "resource": "discipline",
+          "value": -1
+        }
+      ],
+      "flavor": "Видихай рівно, вдихай повагу.",
+      "image": "/cards/lyap-20.png"
+    }
+  ],
+  "legendaryDeck": []
+}

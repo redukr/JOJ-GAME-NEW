@@ -1,0 +1,7 @@
+{
+  "watch": ["server", "src/game"],
+  "ext": "ts,tsx,json",
+  "ignore": ["dist", "node_modules"],
+  "exec": "tsx server/index.ts",
+  "signal": "SIGTERM"
+}

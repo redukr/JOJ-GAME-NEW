@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
+    "dev": "vite",
+    "dev:full": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
     "dev:web": "vite",
-    "dev:server": "tsx watch server/index.ts",
+    "dev:server": "node --watch --watch-path=server --watch-path=src/game --import tsx server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "start:server": "tsx server/index.ts"
+    "start:server": "tsx server/index.ts",
+    "postinstall": "node scripts/fix-is-generator-function.cjs"
   },
   "dependencies": {
     "boardgame.io": "^0.50.2",

@@ -1,4 +1,5 @@
 export type ResourceKey = 'time' | 'reputation' | 'discipline' | 'documents' | 'tech';
+export type EffectResource = ResourceKey | 'rank';
 
 export type CardCategory =
   | 'LYAP'
@@ -19,8 +20,13 @@ export interface Card {
   id: string;
   title: string;
   category: CardCategory;
-  cost: Partial<Record<ResourceKey, number>>;
+  cost?: Partial<Record<ResourceKey, number>>;
   image?: string;
+  effects?: Array<{
+    resource: EffectResource;
+    value: number;
+  }>;
+  flavor?: string;
 }
 
 export interface Rank {
