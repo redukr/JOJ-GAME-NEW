@@ -70,31 +70,47 @@ body {
 }
 
 .game-card-popover {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  z-index: 20;
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
   display: none;
-  width: min(360px, 60vw);
-  max-height: 70vh;
+  width: auto;
+  max-width: min(620px, 46vw);
+  max-height: 92vh;
   padding: 6px;
   border: 1px solid #98a2b3;
   border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 16px 40px rgba(16, 24, 40, 0.28);
+  pointer-events: none;
 }
 
 .game-card-popover img {
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: calc(70vh - 12px);
+  max-width: min(620px, calc(46vw - 12px));
+  max-height: calc(92vh - 12px);
   object-fit: contain;
 }
 
 .game-card:hover .game-card-popover,
 .game-card:focus-visible .game-card-popover {
   display: block;
+}
+
+@media (max-width: 900px) {
+  .game-card-popover {
+    right: 8px;
+    max-width: 92vw;
+    max-height: 86vh;
+  }
+
+  .game-card-popover img {
+    max-width: calc(92vw - 12px);
+    max-height: calc(86vh - 12px);
+  }
 }
 
 .game-card-body {

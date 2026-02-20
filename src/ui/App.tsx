@@ -236,12 +236,12 @@ export const App = () => {
         playerID: session.playerID,
         credentials: session.credentials,
       });
+    } catch {
+      // match may already be gone; continue clearing local session
+    } finally {
       setSession(null);
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
       await refreshMatches();
-    } catch {
-      setError(t.leaveFailed);
-    } finally {
       setLoading(false);
     }
   };
@@ -252,22 +252,19 @@ export const App = () => {
   );
 
   const canStart = Boolean(activeMatch && activeMatch.players.every((player) => Boolean(player.name)));
+  const sessionBroken = Boolean(session && !activeMatch && !loading);
 
   useEffect(() => {
     void (async () => {
-      const saved = window.localStorage.getItem(SHARED_TEMPLATE_STORAGE_KEY);
-      let loadedLocal = false;
-      if (saved) {
-        const result = importSharedDeckTemplateJson(saved);
-        if (result.ok) {
-          refreshSharedDeckTemplate(false);
-          loadedLocal = true;
+      const loadedFromServer = await loadTemplateFromServer();
+      if (!loadedFromServer) {
+        const saved = window.localStorage.getItem(SHARED_TEMPLATE_STORAGE_KEY);
+        if (saved) {
+          const result = importSharedDeckTemplateJson(saved);
+          if (result.ok) {
+            refreshSharedDeckTemplate(false);
+          }
         }
-      }
-      if (loadedLocal) {
-        void syncTemplateToServer(exportSharedDeckTemplateJson());
-      } else {
-        await loadTemplateFromServer();
       }
     })();
   }, []);
@@ -279,6 +276,12 @@ export const App = () => {
     }, 4000);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!sessionBroken) return;
+    setSession(null);
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  }, [sessionBroken]);
 
   useEffect(() => {
     window.localStorage.setItem('joj-lang', lang);
@@ -357,6 +360,22 @@ export const App = () => {
             );
           })}
 
+        </section>
+      ) : null}
+
+      {!isAdminRoute && session ? (
+        <section className="board">
+          <h2>
+            {t.activeRoom}: {session.matchID}
+          </h2>
+          <p>
+            {t.joinedAs}: {playerName || '-'} (#{session.playerID})
+          </p>
+          {sessionBroken ? <p>{t.noRooms}</p> : null}
+          {!sessionBroken && !canStart ? <p>{t.waitingForPlayers}</p> : null}
+          <button type="button" onClick={leaveRoom} disabled={loading}>
+            {t.leaveRoom}
+          </button>
         </section>
       ) : null}
 

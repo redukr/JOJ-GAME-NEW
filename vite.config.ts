@@ -93,11 +93,4 @@ const uploadImagePlugin = (): Plugin => {
 
 export default defineConfig({
   plugins: [react(), uploadImagePlugin()],
-  server: {
-    headers: {
-      // Dev-only CSP to allow Vite HMR / React refresh runtime.
-      'Content-Security-Policy':
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; connect-src 'self' ws: wss: http: https:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;",
-    },
-  },
 });

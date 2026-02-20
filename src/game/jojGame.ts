@@ -11,9 +11,25 @@ const PLAY_STAGE = 'play';
 
 const resourceKeys: ResourceKey[] = ['time', 'reputation', 'discipline', 'documents', 'tech'];
 
+export const normalizeImagePath = (input?: string): string | undefined => {
+  if (!input) return undefined;
+  const raw = input.trim();
+  if (!raw) return undefined;
+
+  const normalized = raw.replace(/\\/g, '/');
+  if (/^(https?:\/\/|data:|blob:)/i.test(normalized)) return normalized;
+  if (normalized.startsWith('/cards/')) return normalized;
+  if (normalized.startsWith('cards/')) return `/${normalized}`;
+  if (normalized.startsWith('/public/cards/')) return normalized.replace('/public', '');
+  if (normalized.startsWith('public/cards/')) return `/${normalized.replace(/^public\//, '')}`;
+  if (/^[^/]+\.(png|webp|jpg|jpeg|gif|svg)$/i.test(normalized)) return `/cards/${normalized}`;
+  return normalized.startsWith('/') ? normalized : `/${normalized}`;
+};
+
 const cloneCard = (card: CardDefinition): CardDefinition => ({
   ...card,
   cost: card.cost ? { ...card.cost } : undefined,
+  image: normalizeImagePath(card.image),
   effects: card.effects?.map((effect) => ({ ...effect })),
 });
 
@@ -79,7 +95,7 @@ const parseCard = (value: unknown): CardDefinition | null => {
   const raw = value as Record<string, unknown>;
   if (typeof raw.id !== 'string' || typeof raw.title !== 'string') return null;
   if (!validCategories.has(raw.category as CardDefinition['category'])) return null;
-  const image = typeof raw.image === 'string' ? raw.image : undefined;
+  const image = normalizeImagePath(typeof raw.image === 'string' ? raw.image : undefined);
   let effects: CardDefinition['effects'];
   if (raw.effects !== undefined) {
     if (!Array.isArray(raw.effects)) return null;
@@ -211,13 +227,22 @@ const replacementCostUnits = (
   effects: CardDefinition['effects'],
 ): number => {
   if (!effects?.length) return 0;
+  const virtual = { ...resources };
   let needed = 0;
   effects.forEach((effect) => {
-    if (effect.resource === 'rank' || effect.value >= 0) return;
-    const required = Math.abs(effect.value);
-    const available = Math.max(0, resources[effect.resource]);
-    if (available < required) {
-      needed += (required - available) * 2;
+    if (effect.resource === 'rank') return;
+    if (effect.value >= 0) {
+      virtual[effect.resource] += effect.value;
+      return;
+    }
+
+    let required = Math.abs(effect.value);
+    const available = Math.max(0, virtual[effect.resource]);
+    const direct = Math.min(available, required);
+    virtual[effect.resource] -= direct;
+    required -= direct;
+    if (required > 0) {
+      needed += required * 2;
     }
   });
   return needed;
@@ -370,8 +395,8 @@ export const jojGame: Game<JojGameState> = {
   },
   turn: {
     activePlayers: { currentPlayer: DRAW_STAGE },
-    onBegin: ({ events }) => {
-      events?.setActivePlayers({ currentPlayer: DRAW_STAGE });
+    onBegin: ({ G, events }) => {
+      events?.setActivePlayers({ currentPlayer: G.deck.length > 0 ? DRAW_STAGE : PLAY_STAGE });
     },
   },
   moves: {

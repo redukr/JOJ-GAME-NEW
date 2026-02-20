@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SyntheticEvent } from 'react';
-import type { DeckTarget } from '../game/jojGame';
+import { normalizeImagePath, type DeckTarget } from '../game/jojGame';
 import type { CardCategory, CardDefinition, EffectResource } from '../game/types';
 import { cardTitle, categoryLabel } from './i18n';
 import type { Language } from './i18n';
@@ -84,6 +84,9 @@ const blankCard = (): CardDefinition => ({
   image: '',
 });
 
+type ImportCategoryMode = CardCategory | 'AS_IS';
+type CategoryFilter = CardCategory | 'ALL';
+
 type HoverImageProps = {
   src: string;
   alt: string;
@@ -128,17 +131,22 @@ export const AdminPage = ({
   const t = text(lang);
   const activeMatch = matches.find((m) => m.id === activeMatchId);
   const [target, setTarget] = useState<DeckTarget>('deck');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL');
   const [selectedCardId, setSelectedCardId] = useState<string>(cardCatalog[0]?.id ?? '');
+  const filteredCatalog = useMemo(
+    () => (categoryFilter === 'ALL' ? cardCatalog : cardCatalog.filter((card) => card.category === categoryFilter)),
+    [cardCatalog, categoryFilter],
+  );
   const selectedCard = useMemo(
-    () => cardCatalog.find((card) => card.id === selectedCardId),
-    [cardCatalog, selectedCardId],
+    () => filteredCatalog.find((card) => card.id === selectedCardId),
+    [filteredCatalog, selectedCardId],
   );
   useEffect(() => {
-    const exists = cardCatalog.some((card) => card.id === selectedCardId);
+    const exists = filteredCatalog.some((card) => card.id === selectedCardId);
     if (!exists) {
-      setSelectedCardId(cardCatalog[0]?.id ?? '');
+      setSelectedCardId(filteredCatalog[0]?.id ?? '');
     }
-  }, [cardCatalog, selectedCardId]);
+  }, [filteredCatalog, selectedCardId]);
 
   const [editTarget, setEditTarget] = useState<DeckTarget>('deck');
   const [editIndex, setEditIndex] = useState<number>(-1);
@@ -148,6 +156,8 @@ export const AdminPage = ({
   const [editError, setEditError] = useState<string>('');
   const [importJson, setImportJson] = useState<string>('');
   const [importError, setImportError] = useState<string>('');
+  const [importTarget, setImportTarget] = useState<DeckTarget>('deck');
+  const [importCategoryMode, setImportCategoryMode] = useState<ImportCategoryMode>('AS_IS');
   const [imagePreviewNonce, setImagePreviewNonce] = useState<number>(0);
   const [restartingServer, setRestartingServer] = useState<boolean>(false);
   const [adminActionError, setAdminActionError] = useState<string>('');
@@ -210,7 +220,7 @@ export const AdminPage = ({
       ...editCard,
       id: editCard.id.trim(),
       title: editCard.title.trim(),
-      image: editCard.image?.trim() || undefined,
+      image: normalizeImagePath(editCard.image?.trim()),
       flavor: editCard.flavor?.trim() || undefined,
       effects,
     });
@@ -224,15 +234,66 @@ export const AdminPage = ({
       ...editCard,
       id: editCard.id.trim(),
       title: editCard.title.trim(),
-      image: editCard.image?.trim() || undefined,
+      image: normalizeImagePath(editCard.image?.trim()),
       flavor: editCard.flavor?.trim() || undefined,
       effects,
     });
   };
 
   const runImport = () => {
-    const error = onImportTemplate(importJson);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(importJson);
+    } catch {
+      setImportError('Invalid JSON');
+      return;
+    }
+
+    const toCardList = (value: unknown): CardDefinition[] | null => {
+      if (Array.isArray(value)) return value as CardDefinition[];
+      if (!value || typeof value !== 'object') return null;
+      const raw = value as Record<string, unknown>;
+      const deck = Array.isArray(raw.deck) ? (raw.deck as CardDefinition[]) : [];
+      const legendaryDeck = Array.isArray(raw.legendaryDeck) ? (raw.legendaryDeck as CardDefinition[]) : [];
+      if (deck.length === 0 && legendaryDeck.length === 0) return null;
+      return [...deck, ...legendaryDeck];
+    };
+
+    const cards = toCardList(parsed);
+    if (!cards) {
+      setImportError('JSON must be an array of cards or { deck, legendaryDeck }');
+      return;
+    }
+
+    const normalizedCards = cards.map((card) => ({
+      ...card,
+      category: importCategoryMode === 'AS_IS' ? card.category : importCategoryMode,
+      image: normalizeImagePath(card.image),
+    }));
+
+    const nextTemplate: SharedDeckTemplate = {
+      deck: sharedDeckTemplate.deck.map((card) => ({ ...card })),
+      legendaryDeck: sharedDeckTemplate.legendaryDeck.map((card) => ({ ...card })),
+      [importTarget]: [...sharedDeckTemplate[importTarget], ...normalizedCards],
+    };
+
+    const error = onImportTemplate(JSON.stringify(nextTemplate, null, 2));
     setImportError(error ?? '');
+  };
+  const exportToFile = () => {
+    const json = onExportTemplate();
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `joj-shared-deck-template-${stamp}.json`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setImportJson(json);
   };
   const attachImageFile = async (file: File | null) => {
     if (!file) return;
@@ -278,8 +339,8 @@ export const AdminPage = ({
   };
 
   const withCacheBust = (src: string) => `${src}${src.includes('?') ? '&' : '?'}v=${imagePreviewNonce}`;
-  const imageSrc = selectedCard?.image ?? (selectedCard ? `/cards/${selectedCard.id}.png` : '');
-  const getImageSrc = (card: CardDefinition) => card.image ?? `/cards/${card.id}.png`;
+  const imageSrc = normalizeImagePath(selectedCard?.image) ?? (selectedCard ? `/cards/${selectedCard.id}.png` : '');
+  const getImageSrc = (card: CardDefinition) => normalizeImagePath(card.image) ?? `/cards/${card.id}.png`;
 
   return (
     <section className="board admin-panel">
@@ -337,8 +398,17 @@ export const AdminPage = ({
           <option value="deck">{t.mainDeck}</option>
           <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
         </select>
+        <label>
+          {t.categoryFilter}
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}>
+            <option value="ALL">{t.allCategories}</option>
+            {categories.map((cat) => (
+              <option key={`filter-${cat}`} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </label>
         <select value={selectedCardId} onChange={(e) => setSelectedCardId(e.target.value)}>
-          {cardCatalog.map((card) => (
+          {filteredCatalog.map((card) => (
             <option key={card.id} value={card.id}>
               {card.id} | {cardTitle(card.id, card.title, lang)}
             </option>
@@ -532,7 +602,26 @@ export const AdminPage = ({
       <hr />
       <h3>{t.importExport}</h3>
       <p className="admin-controls">
-        <button type="button" onClick={() => setImportJson(onExportTemplate())}>{t.exportJson}</button>
+        <button type="button" onClick={exportToFile}>{t.exportJson}</button>
+        <label>
+          {t.importToDeck}
+          <select value={importTarget} onChange={(e) => setImportTarget(e.target.value as DeckTarget)}>
+            <option value="deck">{t.mainDeck}</option>
+            <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
+          </select>
+        </label>
+        <label>
+          {t.importCategoryLabel}
+          <select
+            value={importCategoryMode}
+            onChange={(e) => setImportCategoryMode(e.target.value as ImportCategoryMode)}
+          >
+            <option value="AS_IS">{t.importCategoryAsIs}</option>
+            {categories.map((cat) => (
+              <option key={`import-cat-${cat}`} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </label>
         <button type="button" onClick={runImport}>{t.importJson}</button>
         <label>
           {t.importFile}

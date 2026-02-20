@@ -1,23 +1,232 @@
 {
   "deck": [
     {
-      "id": "lyap-04",
-      "title": "Загублений бланк №27",
-      "category": "LYAP",
-      "image": "/cards/lyap-04.png",
+      "id": "scandal-01",
+      "title": "Яйця по 17 гривень",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614354252.png",
       "effects": [
+        {
+          "resource": "reputation",
+          "value": -2
+        },
+        {
+          "resource": "discipline",
+          "value": -1
+        }
+      ],
+      "flavor": "Символ епохи великого апетиту та малого контролю."
+    },
+    {
+      "id": "scandal-02",
+      "title": "Куртки Резнікова",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614366040.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
         {
           "resource": "documents",
           "value": -1
         }
       ],
-      "flavor": "Бланк пішов у поле. Назавжди."
+      "flavor": "Тепло — поняття відносне, особливо в тендері."
     },
     {
-      "id": "lyap-07",
-      "title": "Підпис за відсутнього начальника",
-      "category": "LYAP",
-      "image": "/cards/card-1771610594856.png",
+      "id": "scandal-03",
+      "title": "Дрони по завищеній ціні",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614378587.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "tech",
+          "value": -1
+        }
+      ],
+      "flavor": "Коли ціна злітає швидше, ніж сам дрон."
+    },
+    {
+      "id": "scandal-04",
+      "title": "Пропажа пального",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614390190.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -2
+        }
+      ],
+      "flavor": "Випарувалось разом із совістю чергового."
+    },
+    {
+      "id": "scandal-05",
+      "title": "Закупівля підписів на тендер",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614425063.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Коли “мокра печатка” — це ще не найвологіше місце в історії."
+    },
+    {
+      "id": "scandal-06",
+      "title": "Пропажа дронів",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614439747.png",
+      "effects": [
+        {
+          "resource": "tech",
+          "value": -2
+        }
+      ],
+      "flavor": "Злетіли — і не повернулись. Як довіра."
+    },
+    {
+      "id": "scandal-07",
+      "title": "Списання бронежилетів як витратних",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614451008.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Захищають від куль, але не від Excel."
+    },
+    {
+      "id": "scandal-08",
+      "title": "Паперовий аудит без документів",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614500039.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Аудит проведено. Папери знайдуться потім."
+    },
+    {
+      "id": "scandal-09",
+      "title": "Відео з полігону",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614508047.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        }
+      ],
+      "flavor": "Мало тренувань — багато переглядів."
+    },
+    {
+      "id": "scandal-10",
+      "title": "Витік наказів у пресу",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771615063474.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Конфіденційно — значить, завтра на YouTube."
+    },
+    {
+      "id": "scandal-11",
+      "title": "Зникнення гуманітарки",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614820343.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "discipline",
+          "value": -1
+        }
+      ],
+      "flavor": "Гуманітарка не зникає. Вона просто змінює власника."
+    },
+    {
+      "id": "scandal-12",
+      "title": "Підроблені рапорти",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614939024.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": -2
+        }
+      ],
+      "flavor": "Усе збігається, крім правди."
+    },
+    {
+      "id": "scandal-13",
+      "title": "Бюджет на ремонт даху",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614949216.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "documents",
+          "value": -1
+        }
+      ],
+      "flavor": "Гроші витекли швидше, ніж дощ крізь дірки."
+    },
+    {
+      "id": "scandal-14",
+      "title": "Викриття корупційної схеми",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771615029111.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": -1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Хоч хтось зробив AAR правильно."
+    },
+    {
+      "id": "scandal-15",
+      "title": "Тушонка",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771614982549.png",
       "effects": [
         {
           "resource": "reputation",
@@ -28,261 +237,28 @@
           "value": 1
         }
       ],
-      "flavor": "Головне — щоб почерк схожий."
+      "flavor": "Сумнівна за смаком, але офіційно прийнята."
     },
     {
-      "id": "lyap-19",
-      "title": "СЗЧ",
-      "category": "LYAP",
-      "image": "/cards/card-1771610424138.png",
+      "id": "scandal-16",
+      "title": "Колаборант",
+      "category": "SCANDAL",
+      "image": "/cards/card-1771615017418.png",
       "effects": [
         {
-          "resource": "time",
-          "value": 1
+          "resource": "reputation",
+          "value": -2
         },
         {
           "resource": "discipline",
-          "value": -2
-        }
-      ],
-      "flavor": "Іноді найкращий спосіб відпочити — піти за кавою… на два дні."
-    },
-    {
-      "id": "lyap-08",
-      "title": "Фотозвіт без фото",
-      "category": "LYAP",
-      "image": "/cards/card-1771610104191.png",
-      "effects": [
+          "value": -1
+        },
         {
           "resource": "tech",
           "value": -1
         }
       ],
-      "flavor": "Головне — підписати, що фото були."
-    },
-    {
-      "id": "lyap-01",
-      "title": "Журнал обліку журналів",
-      "category": "LYAP",
-      "image": "/cards/card-1771610638674.png",
-      "effects": [
-        {
-          "resource": "time",
-          "value": -1
-        },
-        {
-          "resource": "documents",
-          "value": -1
-        }
-      ],
-      "flavor": "Без журналу журналів немає контролю над журналами."
-    },
-    {
-      "id": "lyap-11",
-      "title": "Плутанина з особовими справами",
-      "category": "LYAP",
-      "image": "/cards/3-1771610573186.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -1
-        },
-        {
-          "resource": "documents",
-          "value": -1
-        }
-      ],
-      "flavor": "Один Іван — три особові."
-    },
-    {
-      "id": "lyap-02",
-      "title": "Три сантиметри відступу",
-      "category": "LYAP",
-      "image": "/cards/3-1771610618679.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -1
-        }
-      ],
-      "flavor": "Не той формат — не той командир."
-    },
-    {
-      "id": "lyap-15",
-      "title": "Подвійна звітність",
-      "category": "LYAP",
-      "image": "/cards/card-1771610498378.png",
-      "effects": [
-        {
-          "resource": "time",
-          "value": -1
-        }
-      ],
-      "flavor": "Два рази звітуй — і все одно не так."
-    },
-    {
-      "id": "lyap-06",
-      "title": "П’ять нарад за один день",
-      "category": "LYAP",
-      "image": "/cards/5.png",
-      "effects": [
-        {
-          "resource": "time",
-          "value": -2
-        }
-      ],
-      "flavor": "Те саме рішення, тільки з різними печатками."
-    },
-    {
-      "id": "lyap-12",
-      "title": "Рапорт на ім’я іншого командира",
-      "category": "LYAP",
-      "image": "/cards/card-1771610530048.png",
-      "effects": [
-        {
-          "resource": "discipline",
-          "value": -1
-        }
-      ],
-      "flavor": "Адресат здивований, система — ні."
-    },
-    {
-      "id": "lyap-03",
-      "title": "Кава на журналі обліку",
-      "category": "LYAP",
-      "image": "/cards/lyap-03.png",
-      "effects": [
-        {
-          "resource": "documents",
-          "value": -1
-        }
-      ],
-      "flavor": "Пляма на аркуші — клеймо на репутації."
-    },
-    {
-      "id": "lyap-20",
-      "title": "Задувка",
-      "category": "LYAP",
-      "image": "/cards/card-1771610438105.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -2
-        },
-        {
-          "resource": "discipline",
-          "value": -1
-        }
-      ],
-      "flavor": "Видихай рівно, вдихай повагу."
-    },
-    {
-      "id": "lyap-17",
-      "title": "Неправильний шрифт у наказі",
-      "category": "LYAP",
-      "image": "/cards/card-1771610458230.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -1
-        }
-      ],
-      "flavor": "Arial проти Times — класика службових воєн."
-    },
-    {
-      "id": "lyap-13",
-      "title": "Неправильна дата у наказі",
-      "category": "LYAP",
-      "image": "/cards/card-1771610554958.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -1
-        }
-      ],
-      "flavor": "Минуле не виправиш. Але можна перепідписати."
-    },
-    {
-      "id": "lyap-18",
-      "title": "Майте повагу до звання",
-      "category": "LYAP",
-      "image": "/cards/card-1771610449611.png",
-      "effects": [
-        {
-          "resource": "rank",
-          "value": -1
-        }
-      ],
-      "flavor": "Коли звертаєшся неправильно — втрачаєш не лише бал, а й майбутнє підвищення."
-    },
-    {
-      "id": "lyap-14",
-      "title": "Втрачений журнал",
-      "category": "LYAP",
-      "image": "/cards/card-1771610541656.png",
-      "effects": [
-        {
-          "resource": "documents",
-          "value": -2
-        }
-      ],
-      "flavor": "Журнал на завданні. Повернеться з перемогою."
-    },
-    {
-      "id": "lyap-16",
-      "title": "Рапорт без дати",
-      "category": "LYAP",
-      "image": "/cards/card-1771610468761.png",
-      "effects": [
-        {
-          "resource": "discipline",
-          "value": -1
-        }
-      ],
-      "flavor": "Слова є, часу немає."
-    },
-    {
-      "id": "lyap-10",
-      "title": "Карта-схема загублена у Google Maps",
-      "category": "LYAP",
-      "image": "/cards/card-1771610581743.png",
-      "effects": [
-        {
-          "resource": "tech",
-          "value": -1
-        }
-      ],
-      "flavor": "Координати зникли в реальному часі."
-    },
-    {
-      "id": "lyap-09",
-      "title": "Плутанина з печатками",
-      "category": "LYAP",
-      "image": "/cards/card-1771610117710.png",
-      "effects": [
-        {
-          "resource": "time",
-          "value": -1
-        },
-        {
-          "resource": "discipline",
-          "value": -1
-        }
-      ],
-      "flavor": "Три печатки — і всі не ті."
-    },
-    {
-      "id": "lyap-05",
-      "title": "План евакуації з орфографічною помилкою",
-      "category": "LYAP",
-      "image": "/cards/lyap-05.png",
-      "effects": [
-        {
-          "resource": "reputation",
-          "value": -1
-        }
-      ],
-      "flavor": "Евакуація починається з граматики."
+      "flavor": "Він завжди з флешкою. І завжди “просто цікавиться”."
     }
   ],
   "legendaryDeck": []

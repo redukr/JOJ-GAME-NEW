@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
 import type { JojGameState, ResourceKey } from '../game/types';
-import { getReplacementUnitsForCard } from '../game/jojGame';
+import { getReplacementUnitsForCard, normalizeImagePath } from '../game/jojGame';
 import type { Language } from './i18n';
 import { cardTitle, categoryLabel, rankLabel, text } from './i18n';
 
@@ -117,7 +117,7 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
           >
             <div className="game-card-media">
               <img
-                src={card.image ?? `/cards/${card.id}.png`}
+                src={normalizeImagePath(card.image) ?? `/cards/${card.id}.png`}
                 alt={cardTitle(card.id, card.title, lang)}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = 'none';
@@ -126,7 +126,7 @@ export const Board = ({ G, ctx, moves, playerID, lang = 'uk', onStateChange }: L
             </div>
             <div className="game-card-popover" aria-hidden="true">
               <img
-                src={card.image ?? `/cards/${card.id}.png`}
+                src={normalizeImagePath(card.image) ?? `/cards/${card.id}.png`}
                 alt={cardTitle(card.id, card.title, lang)}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = 'none';
