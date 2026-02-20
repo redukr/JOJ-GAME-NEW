@@ -227,12 +227,20 @@ export const AdminPage = ({
     id: '',
     name: '',
     requirement: {},
+    cost: {},
     bonus: {},
   });
+  const [ranksJson, setRanksJson] = useState<string>(() => JSON.stringify(sharedRanks, null, 2));
+  const [ranksImportError, setRanksImportError] = useState<string>('');
+  const [ranksImportStatus, setRanksImportStatus] = useState<string>('');
 
   useEffect(() => {
     setDeckBackImageInput(sharedDeckTemplate.deckBackImage ?? '');
   }, [sharedDeckTemplate.deckBackImage]);
+
+  useEffect(() => {
+    setRanksJson(JSON.stringify(sharedRanks, null, 2));
+  }, [sharedRanks]);
 
   useEffect(() => {
     const current = cropDraft?.sourceUrl ?? null;
@@ -594,6 +602,7 @@ export const AdminPage = ({
     const next = sharedRanks.map((rank, i) => (i === index ? updater({
       ...rank,
       requirement: { ...rank.requirement },
+      cost: { ...rank.cost },
       bonus: { ...rank.bonus },
     }) : rank));
     onUpdateRanks(next);
@@ -603,22 +612,75 @@ export const AdminPage = ({
     const name = rankDraft.name.trim();
     if (!id || !name) return;
     const next: RankDefinition[] = [
-      ...sharedRanks.map((row) => ({ ...row, requirement: { ...row.requirement }, bonus: { ...row.bonus } })),
+      ...sharedRanks.map((row) => ({
+        ...row,
+        requirement: { ...row.requirement },
+        cost: { ...row.cost },
+        bonus: { ...row.bonus },
+      })),
       {
         id,
         name,
         requirement: { ...rankDraft.requirement },
+        cost: { ...rankDraft.cost },
         bonus: { ...rankDraft.bonus },
       },
     ];
     const ok = onUpdateRanks(next);
     if (!ok) return;
-    setRankDraft({ id: '', name: '', requirement: {}, bonus: {} });
+    setRankDraft({ id: '', name: '', requirement: {}, cost: {}, bonus: {} });
   };
   const removeRankAt = (index: number) => {
     if (sharedRanks.length <= 1) return;
     const next = sharedRanks.filter((_, i) => i !== index);
     onUpdateRanks(next);
+  };
+  const exportRanksToFile = () => {
+    const json = JSON.stringify(sharedRanks, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `joj-ranks-${stamp}.json`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setRanksJson(json);
+  };
+  const importRanks = () => {
+    setRanksImportError('');
+    setRanksImportStatus('');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(ranksJson);
+    } catch {
+      setRanksImportError(t.invalidJson);
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      setRanksImportError(t.ranksJsonArrayError);
+      return;
+    }
+    const ok = onUpdateRanks(parsed as RankDefinition[]);
+    if (!ok) {
+      setRanksImportError(t.ranksSchemaError);
+      return;
+    }
+    setRanksImportStatus(`${t.ranksImportSuccess} ${parsed.length}.`);
+  };
+  const importRanksFromFile = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const next = typeof reader.result === 'string' ? reader.result : '';
+      setRanksJson(next);
+      setRanksImportError('');
+      setRanksImportStatus('');
+    };
+    reader.readAsText(file);
   };
 
   const inlineEditor = (
@@ -1048,6 +1110,25 @@ export const AdminPage = ({
         <>
           <h3>{t.ranksTitle}</h3>
           <p>{t.ranksHint}</p>
+          <p className="admin-controls">
+            <button type="button" onClick={exportRanksToFile}>{t.exportJson}</button>
+            <button type="button" onClick={importRanks}>{t.importJson}</button>
+            <label>
+              {t.importFile}
+              <input type="file" accept="application/json,.json" onChange={(e) => importRanksFromFile(e.target.files?.[0] ?? null)} />
+            </label>
+          </p>
+          {ranksImportError ? <p className="admin-error">{ranksImportError}</p> : null}
+          {ranksImportStatus ? <p className="admin-success">{ranksImportStatus}</p> : null}
+          <textarea
+            className="admin-textarea"
+            value={ranksJson}
+            onChange={(e) => {
+              setRanksJson(e.target.value);
+              setRanksImportError('');
+              setRanksImportStatus('');
+            }}
+          />
           <div className="admin-deck-list">
             <ul>
               {sharedRanks.map((rank, index) => (
@@ -1079,6 +1160,23 @@ export const AdminPage = ({
                               ...row,
                               requirement: {
                                 ...row.requirement,
+                                [key]: Math.max(0, Number(e.target.value || 0)),
+                              },
+                            }))}
+                          />
+                        </label>
+                      ))}
+                      {rankResourceKeys.map((key) => (
+                        <label key={`cost-${rank.id}-${key}`}>
+                          {`${t.rankCostLabel} ${t.resources[key]}`}
+                          <input
+                            type="number"
+                            min={0}
+                            value={rank.cost[key] ?? 0}
+                            onChange={(e) => updateRankAt(index, (row) => ({
+                              ...row,
+                              cost: {
+                                ...row.cost,
                                 [key]: Math.max(0, Number(e.target.value || 0)),
                               },
                             }))}
@@ -1135,6 +1233,23 @@ export const AdminPage = ({
                       ...prev,
                       requirement: {
                         ...prev.requirement,
+                        [key]: Math.max(0, Number(e.target.value || 0)),
+                      },
+                    }))}
+                  />
+                </label>
+              ))}
+              {rankResourceKeys.map((key) => (
+                <label key={`draft-cost-${key}`}>
+                  {`${t.rankCostLabel} ${t.resources[key]}`}
+                  <input
+                    type="number"
+                    min={0}
+                    value={rankDraft.cost[key] ?? 0}
+                    onChange={(e) => setRankDraft((prev) => ({
+                      ...prev,
+                      cost: {
+                        ...prev.cost,
                         [key]: Math.max(0, Number(e.target.value || 0)),
                       },
                     }))}

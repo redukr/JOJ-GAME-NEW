@@ -8,7 +8,8 @@
     },
     "bonus": {
       "time": -1
-    }
+    },
+    "cost": {}
   },
   {
     "id": "senior_soldier",
@@ -19,7 +20,8 @@
     },
     "bonus": {
       "time": -2
-    }
+    },
+    "cost": {}
   },
   {
     "id": "junior_sergeant",
@@ -31,7 +33,8 @@
     },
     "bonus": {
       "time": -2
-    }
+    },
+    "cost": {}
   },
   {
     "id": "sergeant",
@@ -43,7 +46,8 @@
     "bonus": {
       "time": -1,
       "documents": -1
-    }
+    },
+    "cost": {}
   },
   {
     "id": "senior_sergeant",
@@ -54,7 +58,8 @@
     },
     "bonus": {
       "time": -2
-    }
+    },
+    "cost": {}
   },
   {
     "id": "chief_sergeant",
@@ -66,7 +71,8 @@
     },
     "bonus": {
       "time": -2
-    }
+    },
+    "cost": {}
   },
   {
     "id": "junior_lieutenant",
@@ -78,7 +84,8 @@
     "bonus": {
       "time": -3,
       "documents": -1
-    }
+    },
+    "cost": {}
   },
   {
     "id": "lieutenant",
@@ -89,7 +96,8 @@
     },
     "bonus": {
       "time": -2
-    }
+    },
+    "cost": {}
   },
   {
     "id": "senior_lieutenant",
@@ -101,7 +109,8 @@
     "bonus": {
       "time": -3,
       "documents": -1
-    }
+    },
+    "cost": {}
   },
   {
     "id": "captain",
@@ -112,7 +121,8 @@
     },
     "bonus": {
       "time": -3
-    }
+    },
+    "cost": {}
   },
   {
     "id": "major",
@@ -124,7 +134,8 @@
     },
     "bonus": {
       "time": -4
-    }
+    },
+    "cost": {}
   },
   {
     "id": "lieutenant_colonel",
@@ -136,7 +147,8 @@
     "bonus": {
       "time": -4,
       "documents": -1
-    }
+    },
+    "cost": {}
   },
   {
     "id": "colonel",
@@ -147,7 +159,8 @@
     },
     "bonus": {
       "time": -5
-    }
+    },
+    "cost": {}
   },
   {
     "id": "brigadier_general",
@@ -159,7 +172,8 @@
     },
     "bonus": {
       "time": -5
-    }
+    },
+    "cost": {}
   },
   {
     "id": "major_general",
@@ -171,7 +185,8 @@
     },
     "bonus": {
       "time": -5
-    }
+    },
+    "cost": {}
   },
   {
     "id": "lieutenant_general",
@@ -182,7 +197,8 @@
     },
     "bonus": {
       "time": -6
-    }
+    },
+    "cost": {}
   },
   {
     "id": "army_general",
@@ -195,6 +211,7 @@
     "bonus": {
       "time": -6,
       "tech": -1
-    }
+    },
+    "cost": {}
   }
 ]

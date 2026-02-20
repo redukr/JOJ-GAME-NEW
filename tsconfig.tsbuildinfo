@@ -1,1 +1,1 @@
-{"root":["./src/main.tsx","./src/game/cards.ts","./src/game/jojgame.ts","./src/game/ranks.ts","./src/game/types.ts","./src/ui/adminpage.tsx","./src/ui/app.tsx","./src/ui/board.tsx","./src/ui/i18n.ts","./server/index.ts","./vite.config.ts"],"errors":true,"version":"5.9.3"}
+{"root":["./src/main.tsx","./src/game/cards.ts","./src/game/jojgame.ts","./src/game/ranks.ts","./src/game/types.ts","./src/ui/adminpage.tsx","./src/ui/app.tsx","./src/ui/board.tsx","./src/ui/i18n.ts","./server/index.ts","./vite.config.ts"],"version":"5.9.3"}

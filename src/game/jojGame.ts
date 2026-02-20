@@ -55,14 +55,6 @@ const supportIntros = [
   'Система зробила вигляд, що все під контролем, і це спрацювало',
   'Внутрішній відділ підтримки відповів швидше, ніж очікували',
 ];
-const decisionIntros = [
-  'Командний вектор урочисто встановлено',
-  'Рішення командування набрало чинності раніше за чутки',
-  'Офіційний курс змінився з формулюванням "без паніки"',
-  'Папка "терміново" відкрилась сама',
-  'Керівна думка приземлилась точно в ціль',
-];
-
 export const normalizeImagePath = (input?: string): string | undefined => {
   if (!input) return undefined;
   const raw = input.trim();
@@ -381,6 +373,13 @@ const shuffle = <T,>(items: T[]): T[] => {
 const hasResources = (resources: Record<ResourceKey, number>, cost: Partial<Record<ResourceKey, number>>): boolean =>
   resourceKeys.every((key) => (resources[key] ?? 0) >= (cost[key] ?? 0));
 
+const spendResources = (resources: Record<ResourceKey, number>, cost: Partial<Record<ResourceKey, number>>) => {
+  resourceKeys.forEach((key) => {
+    const value = Math.max(0, cost[key] ?? 0);
+    if (value > 0) resources[key] -= value;
+  });
+};
+
 const applyResourceDelta = (
   resources: Record<ResourceKey, number>,
   delta: Partial<Record<ResourceKey, number>>,
@@ -656,15 +655,28 @@ const syncPlayerState = (G: JojGameState, playerID: string): void => {
   G.players[playerID].resources = G.resources[playerID];
 };
 
-const promoteRank = (G: JojGameState, playerID: string): boolean => {
+const rankSeatLimit = (playerCount: number): number => {
+  if (playerCount <= 2) return 1;
+  if (playerCount <= 4) return 2;
+  return 3;
+};
+
+const promoteRank = (G: JojGameState, playerID: string, playerCount: number): boolean => {
   const ranks = getActiveRanks();
   const currentRankId = G.ranks[playerID];
   const currentRankIdx = Math.max(0, ranks.findIndex((r) => r.id === currentRankId));
   const nextRank = ranks[currentRankIdx + 1];
   if (!nextRank) return false;
 
+  const occupied = Object.entries(G.ranks)
+    .filter(([pid, rankId]) => pid !== playerID && rankId === nextRank.id)
+    .length;
+  if (occupied >= rankSeatLimit(playerCount)) return false;
+
   const playerResources = G.resources[playerID];
   if (!hasResources(playerResources, nextRank.requirement)) return false;
+  if (!hasResources(playerResources, nextRank.cost)) return false;
+  spendResources(playerResources, nextRank.cost);
   applyResourceDelta(playerResources, nextRank.bonus);
   G.ranks[playerID] = nextRank.id;
   syncPlayerState(G, playerID);
@@ -1249,7 +1261,8 @@ export const jojGame: Game<JojGameState> = {
       const playerID = args.playerID;
       if (!playerID || args.ctx.currentPlayer !== playerID) return INVALID_MOVE;
       if (args.ctx.activePlayers?.[playerID] !== PLAY_STAGE) return INVALID_MOVE;
-      if (!promoteRank(args.G, playerID)) return INVALID_MOVE;
+      const playerCount = Object.keys(args.G.players).length || Number(args.ctx.numPlayers ?? 0) || 2;
+      if (!promoteRank(args.G, playerID, playerCount)) return INVALID_MOVE;
       return undefined;
     },
     pass: (args) => {
