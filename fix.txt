@@ -1,0 +1,19 @@
+Перевірка еталону: templates/all cards.txt
+Дата: 2026-02-20
+
+Підсумок аудиту:
+- Перевірено категорії: LYAP, SCANDAL, SUPPORT, DECISION
+- Еталонна кількість карт: 86
+- Шаблони (templates/*.json): 86
+- Системна колода (database/shared-deck-template.json): 86
+- Невідповідностей по id/title/category/effects/flavor: 0
+- Дублікатів id: 0
+- Відсутніх карт у системі: 0
+- Зайвих карт у системі: 0
+
+Зміни:
+1) Було: колода та шаблони після звірки без відхилень.
+   Стало: без змін (виправлення не потрібні).
+
+2) Було: структура та параметри карт у templates/lyaps.json, templates/scandal.json, templates/support.json, templates/descision.json.
+   Стало: без змін (повністю відповідає all cards.txt і database/shared-deck-template.json).

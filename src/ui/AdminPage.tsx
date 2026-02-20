@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SyntheticEvent } from 'react';
-import { normalizeImagePath, type DeckTarget } from '../game/jojGame';
-import type { CardCategory, CardDefinition, EffectResource } from '../game/types';
+import { normalizeImagePath, type DeckTarget, type SimulationReport } from '../game/jojGame';
+import type { CardCategory, CardDefinition, EffectResource, RankDefinition, ResourceKey } from '../game/types';
 import { cardTitle, categoryLabel } from './i18n';
 import type { Language } from './i18n';
 import { text } from './i18n';
@@ -33,17 +33,16 @@ type AdminPageProps = {
   lang: Language;
   matches: MatchInfo[];
   activeMatchId: string;
-  playerID: string;
   snapshot: Snapshot | null;
   deckStats: DeckStats;
   sharedDeckTemplate: SharedDeckTemplate;
   cardCatalog: CardDefinition[];
+  sharedRanks: RankDefinition[];
   onCreateMatch: () => void;
   onResetMatch: () => void;
   onDeleteMatch: () => void;
   onResetAll: () => void;
   onRestartServer: () => Promise<boolean>;
-  onPlayerChange: (playerID: string) => void;
   onShuffleDeck: () => void;
   onAddCard: (target: DeckTarget, cardId: string) => void;
   onAddCustomCard: (target: DeckTarget, card: CardDefinition) => void;
@@ -53,10 +52,14 @@ type AdminPageProps = {
   onSetDeckBackImage: (path?: string) => void;
   onExportTemplate: () => string;
   onImportTemplate: (json: string) => string | null;
+  onUpdateRanks: (nextRanks: RankDefinition[]) => boolean;
+  onResetRanks: () => void;
+  onRunSimulations: (players: number, simulations: number) => SimulationReport;
 };
 
 const categories: CardCategory[] = ['LYAP', 'SCANDAL', 'SUPPORT', 'DECISION', 'NEUTRAL', 'VVNZ', 'LEGENDARY'];
 const effectResourceKeys: EffectResource[] = ['time', 'reputation', 'discipline', 'documents', 'tech', 'rank'];
+const rankResourceKeys: ResourceKey[] = ['time', 'reputation', 'discipline', 'documents', 'tech'];
 const zeroEffectValues = (): Record<EffectResource, number> => ({
   time: 0,
   reputation: 0,
@@ -88,7 +91,50 @@ const blankCard = (): CardDefinition => ({
 
 type ImportCategoryMode = CardCategory | 'AS_IS';
 type CategoryFilter = CardCategory | 'ALL';
-type AdminTab = 'matches' | 'deck' | 'import' | 'state';
+type AdminTab = 'matches' | 'deck' | 'import' | 'state' | 'ranks' | 'simulation';
+type CropDraft = {
+  filename: string;
+  sourceBlob: Blob;
+  sourceUrl: string;
+  mime: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  topPx: number;
+  rightPx: number;
+  bottomPx: number;
+  leftPx: number;
+};
+
+const CARD_ASPECT_RATIO = 352 / 540; // width / height
+
+const clampPx = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const getAspectLockedCropRect = (draft: CropDraft, imageWidth: number, imageHeight: number) => {
+  const topPx = clampPx(draft.topPx, 0, Math.max(0, imageHeight - 1));
+  const rightPx = clampPx(draft.rightPx, 0, Math.max(0, imageWidth - 1));
+  const bottomPx = clampPx(draft.bottomPx, 0, Math.max(0, imageHeight - 1));
+  const leftPx = clampPx(draft.leftPx, 0, Math.max(0, imageWidth - 1));
+
+  const availablePw = Math.max(1, imageWidth - leftPx - rightPx);
+  const availablePh = Math.max(1, imageHeight - topPx - bottomPx);
+
+  let cropPw = availablePw;
+  let cropPh = availablePh;
+  if (cropPw / cropPh > CARD_ASPECT_RATIO) {
+    cropPw = Math.max(1, Math.floor(cropPh * CARD_ASPECT_RATIO));
+  } else {
+    cropPh = Math.max(1, Math.floor(cropPw / CARD_ASPECT_RATIO));
+  }
+
+  const sx = leftPx + Math.floor((availablePw - cropPw) / 2);
+  const sy = topPx + Math.floor((availablePh - cropPh) / 2);
+  const maxSw = Math.max(1, imageWidth - sx);
+  const maxSh = Math.max(1, imageHeight - sy);
+  const sw = Math.max(1, Math.min(maxSw, cropPw));
+  const sh = Math.max(1, Math.min(maxSh, cropPh));
+
+  return { sx, sy, sw, sh };
+};
 
 type HoverImageProps = {
   src: string;
@@ -111,17 +157,16 @@ export const AdminPage = ({
   lang,
   matches,
   activeMatchId,
-  playerID,
   snapshot,
   deckStats,
   sharedDeckTemplate,
   cardCatalog,
+  sharedRanks,
   onCreateMatch,
   onResetMatch,
   onDeleteMatch,
   onResetAll,
   onRestartServer,
-  onPlayerChange,
   onShuffleDeck,
   onAddCard,
   onAddCustomCard,
@@ -131,6 +176,9 @@ export const AdminPage = ({
   onSetDeckBackImage,
   onExportTemplate,
   onImportTemplate,
+  onUpdateRanks,
+  onResetRanks,
+  onRunSimulations,
 }: AdminPageProps) => {
   const t = text(lang);
   const activeMatch = matches.find((m) => m.id === activeMatchId);
@@ -160,6 +208,7 @@ export const AdminPage = ({
   const [editError, setEditError] = useState<string>('');
   const [importJson, setImportJson] = useState<string>('');
   const [importError, setImportError] = useState<string>('');
+  const [importStatus, setImportStatus] = useState<string>('');
   const [importTarget, setImportTarget] = useState<DeckTarget>('deck');
   const [importCategoryMode, setImportCategoryMode] = useState<ImportCategoryMode>('AS_IS');
   const [imagePreviewNonce, setImagePreviewNonce] = useState<number>(0);
@@ -167,10 +216,76 @@ export const AdminPage = ({
   const [adminActionError, setAdminActionError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<AdminTab>('matches');
   const [deckBackImageInput, setDeckBackImageInput] = useState<string>(sharedDeckTemplate.deckBackImage ?? '');
+  const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
+  const cropPreviewRef = useRef<HTMLCanvasElement | null>(null);
+  const cropObjectUrlRef = useRef<string | null>(null);
+  const [simulationPlayers, setSimulationPlayers] = useState<number>(4);
+  const [simulationCount, setSimulationCount] = useState<number>(500);
+  const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null);
+  const [simulationRunning, setSimulationRunning] = useState<boolean>(false);
+  const [rankDraft, setRankDraft] = useState<RankDefinition>({
+    id: '',
+    name: '',
+    requirement: {},
+    bonus: {},
+  });
 
   useEffect(() => {
     setDeckBackImageInput(sharedDeckTemplate.deckBackImage ?? '');
   }, [sharedDeckTemplate.deckBackImage]);
+
+  useEffect(() => {
+    const current = cropDraft?.sourceUrl ?? null;
+    const prev = cropObjectUrlRef.current;
+    if (prev && prev !== current) {
+      URL.revokeObjectURL(prev);
+    }
+    cropObjectUrlRef.current = current;
+  }, [cropDraft?.sourceUrl]);
+
+  useEffect(() => () => {
+    if (cropObjectUrlRef.current) {
+      URL.revokeObjectURL(cropObjectUrlRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!cropDraft || !cropPreviewRef.current) return;
+    const canvas = cropPreviewRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const image = new Image();
+    image.onload = () => {
+      if (
+        cropDraft.sourceWidth !== image.width ||
+        cropDraft.sourceHeight !== image.height
+      ) {
+        setCropDraft((prev) => (prev
+          ? {
+              ...prev,
+              sourceWidth: image.width,
+              sourceHeight: image.height,
+            }
+          : prev));
+      }
+      const { sx, sy, sw, sh } = getAspectLockedCropRect(cropDraft, image.width, image.height);
+
+      canvas.width = sw;
+      canvas.height = sh;
+      ctx.clearRect(0, 0, sw, sh);
+      ctx.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
+    };
+    image.src = cropDraft.sourceUrl;
+  }, [cropDraft]);
+
+  const blobToDataUrl = async (blob: Blob): Promise<string> =>
+    new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
 
   const beginEdit = (nextTarget: DeckTarget, index: number, card: CardDefinition) => {
     setEditTarget(nextTarget);
@@ -251,6 +366,7 @@ export const AdminPage = ({
   };
 
   const runImport = () => {
+    setImportStatus('');
     let parsed: unknown;
     try {
       parsed = JSON.parse(importJson);
@@ -289,7 +405,19 @@ export const AdminPage = ({
     };
 
     const error = onImportTemplate(JSON.stringify(nextTemplate, null, 2));
-    setImportError(error ?? '');
+    if (error) {
+      setImportError(error);
+      setImportStatus('');
+      return;
+    }
+    setImportError('');
+    const targetLabel = importTarget === 'deck' ? t.mainDeck : t.legendaryDeckLabel;
+    const suffix = importCategoryMode === 'AS_IS' ? t.importCategoryAsIs : importCategoryMode;
+    setImportStatus(
+      lang === 'uk'
+        ? `Імпорт успішний: додано ${normalizedCards.length} карт у «${targetLabel}» (категорія: ${suffix}).`
+        : `Import successful: added ${normalizedCards.length} cards to "${targetLabel}" (category: ${suffix}).`,
+    );
   };
   const exportToFile = () => {
     const json = onExportTemplate();
@@ -306,47 +434,124 @@ export const AdminPage = ({
     URL.revokeObjectURL(url);
     setImportJson(json);
   };
-  const attachImageFile = async (file: File | null) => {
-    if (!file) return;
-    const reader = new FileReader();
-    const dataUrl = await new Promise<string>((resolve) => {
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-    if (!dataUrl) {
-      setEditError(lang === 'uk' ? 'Не вдалося прочитати файл зображення' : 'Failed to read image file');
-      return;
-    }
+  const uploadDataUrl = async (filename: string, dataUrl: string, cardId?: string): Promise<string | null> => {
     try {
       const response = await fetch('/api/upload-card-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: file.name,
+          filename,
           dataUrl,
+          cardId,
         }),
       });
       const payload = (await response.json()) as { path?: string; error?: string };
       if (!response.ok || !payload.path) {
         setEditError(payload.error ?? (lang === 'uk' ? 'Помилка завантаження' : 'Upload failed'));
-        return;
+        return null;
       }
-      setEditError('');
-      setEditCard((prev) => ({ ...prev, image: payload.path }));
-      setImagePreviewNonce((v) => v + 1);
+      return payload.path;
     } catch {
       setEditError(lang === 'uk' ? 'Помилка завантаження' : 'Upload failed');
+      return null;
     }
   };
-  const importFromFile = (file: File | null) => {
+  const attachImageFile = async (file: File | null) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : '';
-      setImportJson(text);
-    };
-    reader.readAsText(file);
+    const sourceUrl = URL.createObjectURL(file);
+    setCropDraft({
+      filename: file.name,
+      sourceBlob: file,
+      sourceUrl,
+      mime: file.type || 'image/png',
+      sourceWidth: 0,
+      sourceHeight: 0,
+      topPx: 0,
+      rightPx: 0,
+      bottomPx: 0,
+      leftPx: 0,
+    });
+    setEditError('');
+  };
+  const startCropFromCurrentImage = async () => {
+    const src = normalizeImagePath(editCard.image?.trim());
+    if (!src) return;
+    try {
+      const response = await fetch(src);
+      if (!response.ok) {
+        setEditError(lang === 'uk' ? 'Не вдалося завантажити поточне зображення' : 'Failed to load current image');
+        return;
+      }
+      const blob = await response.blob();
+      const nameFromPath = src.split('/').pop() || `${editCard.id || 'card-image'}.png`;
+      const sourceUrl = URL.createObjectURL(blob);
+      setCropDraft({
+        filename: nameFromPath,
+        sourceBlob: blob,
+        sourceUrl,
+        mime: blob.type || 'image/png',
+        sourceWidth: 0,
+        sourceHeight: 0,
+        topPx: 0,
+        rightPx: 0,
+        bottomPx: 0,
+        leftPx: 0,
+      });
+      setEditError('');
+    } catch {
+      setEditError(lang === 'uk' ? 'Не вдалося завантажити поточне зображення' : 'Failed to load current image');
+    }
+  };
+  const uploadOriginalFromCropDraft = async () => {
+    if (!cropDraft) return;
+    const dataUrl = await blobToDataUrl(cropDraft.sourceBlob);
+    if (!dataUrl) {
+      setEditError(lang === 'uk' ? 'Не вдалося прочитати зображення' : 'Failed to read image');
+      return;
+    }
+    const path = await uploadDataUrl(cropDraft.filename, dataUrl);
+    if (!path) return;
+    setEditError('');
+    setEditCard((prev) => ({ ...prev, image: path }));
+    setImagePreviewNonce((v) => v + 1);
+    setCropDraft(null);
+  };
+  const applyCropAndUpload = async () => {
+    if (!cropDraft) return;
+    const image = new Image();
+    const loaded = await new Promise<boolean>((resolve) => {
+      image.onload = () => resolve(true);
+      image.onerror = () => resolve(false);
+      image.src = cropDraft.sourceUrl;
+    });
+    if (!loaded) {
+      setEditError(lang === 'uk' ? 'Не вдалося обробити зображення' : 'Failed to process image');
+      return;
+    }
+
+    const { sx, sy, sw, sh } = getAspectLockedCropRect(cropDraft, image.width, image.height);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setEditError(lang === 'uk' ? 'Не вдалося обробити зображення' : 'Failed to process image');
+      return;
+    }
+    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    const outDataUrl = canvas.toDataURL(cropDraft.mime);
+    const path = await uploadDataUrl(cropDraft.filename, outDataUrl);
+    if (!path) return;
+    setEditError('');
+    setEditCard((prev) => ({ ...prev, image: path }));
+    setImagePreviewNonce((v) => v + 1);
+    setCropDraft(null);
+  };
+  const cancelCropDraft = () => {
+    setCropDraft(null);
+    setEditError('');
   };
   const uploadDeckBackImage = async (file: File | null) => {
     if (!file) return;
@@ -360,27 +565,22 @@ export const AdminPage = ({
       setEditError(lang === 'uk' ? 'Не вдалося прочитати файл зображення' : 'Failed to read image file');
       return;
     }
-    try {
-      const response = await fetch('/api/upload-card-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          dataUrl,
-          cardId: 'deck-back',
-        }),
-      });
-      const payload = (await response.json()) as { path?: string; error?: string };
-      if (!response.ok || !payload.path) {
-        setEditError(payload.error ?? (lang === 'uk' ? 'Помилка завантаження' : 'Upload failed'));
-        return;
-      }
-      onSetDeckBackImage(payload.path);
-      setDeckBackImageInput(payload.path);
-      setImagePreviewNonce((v) => v + 1);
-    } catch {
-      setEditError(lang === 'uk' ? 'Помилка завантаження' : 'Upload failed');
+    const path = await uploadDataUrl(file.name, dataUrl, 'deck-back');
+    if (!path) {
+      return;
     }
+    onSetDeckBackImage(path);
+    setDeckBackImageInput(path);
+    setImagePreviewNonce((v) => v + 1);
+  };
+  const importFromFile = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      setImportJson(text);
+    };
+    reader.readAsText(file);
   };
 
   const withCacheBust = (src: string) => `${src}${src.includes('?') ? '&' : '?'}v=${imagePreviewNonce}`;
@@ -389,6 +589,36 @@ export const AdminPage = ({
   const closeEditor = () => {
     setEditIndex(-1);
     setEditError('');
+  };
+  const updateRankAt = (index: number, updater: (rank: RankDefinition) => RankDefinition) => {
+    const next = sharedRanks.map((rank, i) => (i === index ? updater({
+      ...rank,
+      requirement: { ...rank.requirement },
+      bonus: { ...rank.bonus },
+    }) : rank));
+    onUpdateRanks(next);
+  };
+  const addRank = () => {
+    const id = rankDraft.id.trim();
+    const name = rankDraft.name.trim();
+    if (!id || !name) return;
+    const next: RankDefinition[] = [
+      ...sharedRanks.map((row) => ({ ...row, requirement: { ...row.requirement }, bonus: { ...row.bonus } })),
+      {
+        id,
+        name,
+        requirement: { ...rankDraft.requirement },
+        bonus: { ...rankDraft.bonus },
+      },
+    ];
+    const ok = onUpdateRanks(next);
+    if (!ok) return;
+    setRankDraft({ id: '', name: '', requirement: {}, bonus: {} });
+  };
+  const removeRankAt = (index: number) => {
+    if (sharedRanks.length <= 1) return;
+    const next = sharedRanks.filter((_, i) => i !== index);
+    onUpdateRanks(next);
   };
 
   const inlineEditor = (
@@ -408,6 +638,59 @@ export const AdminPage = ({
         <label>{t.fieldImageFile}
           <input type="file" accept="image/*" onChange={(e) => attachImageFile(e.target.files?.[0] ?? null)} />
         </label>
+        {cropDraft ? (
+          <div className="admin-crop-editor">
+            <p><strong>{t.cropEditorTitle}</strong></p>
+            <p>{t.cropAspectLocked}</p>
+            {cropDraft.sourceWidth > 0 && cropDraft.sourceHeight > 0 ? (
+              <p>{t.cropSourceSize}: {cropDraft.sourceWidth}x{cropDraft.sourceHeight}px</p>
+            ) : null}
+            <div className="admin-crop-grid">
+              <label>{t.cropTop}
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.max(0, cropDraft.sourceHeight - 1)}
+                  value={cropDraft.topPx}
+                  onChange={(e) => setCropDraft((prev) => (prev ? { ...prev, topPx: Number(e.target.value || 0) } : prev))}
+                />
+              </label>
+              <label>{t.cropRight}
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.max(0, cropDraft.sourceWidth - 1)}
+                  value={cropDraft.rightPx}
+                  onChange={(e) => setCropDraft((prev) => (prev ? { ...prev, rightPx: Number(e.target.value || 0) } : prev))}
+                />
+              </label>
+              <label>{t.cropBottom}
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.max(0, cropDraft.sourceHeight - 1)}
+                  value={cropDraft.bottomPx}
+                  onChange={(e) => setCropDraft((prev) => (prev ? { ...prev, bottomPx: Number(e.target.value || 0) } : prev))}
+                />
+              </label>
+              <label>{t.cropLeft}
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.max(0, cropDraft.sourceWidth - 1)}
+                  value={cropDraft.leftPx}
+                  onChange={(e) => setCropDraft((prev) => (prev ? { ...prev, leftPx: Number(e.target.value || 0) } : prev))}
+                />
+              </label>
+            </div>
+            <canvas className="admin-crop-preview" ref={cropPreviewRef} />
+            <p className="admin-controls">
+              <button type="button" onClick={applyCropAndUpload}>{t.applyCropUpload}</button>
+              <button type="button" onClick={uploadOriginalFromCropDraft}>{t.uploadWithoutCrop}</button>
+              <button type="button" onClick={cancelCropDraft}>{t.cancelCrop}</button>
+            </p>
+          </div>
+        ) : null}
         {editCard.image ? (
           <label>{t.fieldImagePreview}
             <HoverImage
@@ -422,6 +705,11 @@ export const AdminPage = ({
                 (e.currentTarget as HTMLImageElement).style.display = 'none';
               }}
             />
+            <span className="admin-controls">
+              <button type="button" onClick={startCropFromCurrentImage}>
+                {t.cropCurrentImage}
+              </button>
+            </span>
           </label>
         ) : null}
         <label>{t.fieldQuickImagePath}
@@ -506,7 +794,9 @@ export const AdminPage = ({
         <button type="button" onClick={() => setActiveTab('matches')} disabled={activeTab === 'matches'}>{t.tabMatches}</button>
         <button type="button" onClick={() => setActiveTab('deck')} disabled={activeTab === 'deck'}>{t.tabDeck}</button>
         <button type="button" onClick={() => setActiveTab('import')} disabled={activeTab === 'import'}>{t.tabImportExport}</button>
+        <button type="button" onClick={() => setActiveTab('ranks')} disabled={activeTab === 'ranks'}>{t.tabRanks}</button>
         <button type="button" onClick={() => setActiveTab('state')} disabled={activeTab === 'state'}>{t.tabState}</button>
+        <button type="button" onClick={() => setActiveTab('simulation')} disabled={activeTab === 'simulation'}>{t.tabSimulation}</button>
       </p>
       <hr />
       {activeTab === 'matches' ? (
@@ -519,15 +809,6 @@ export const AdminPage = ({
           </p>
           <p>
             {t.createdAt}: {activeMatch ? new Date(activeMatch.createdAt).toLocaleString() : t.notSelected}
-          </p>
-          <p>
-            {t.playerView}:{' '}
-            <select value={playerID} onChange={(e) => onPlayerChange(e.target.value)}>
-              <option value="0">0</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
           </p>
           <p className="admin-controls">
             <button type="button" onClick={onCreateMatch}>{t.createMatch}</button>
@@ -707,7 +988,13 @@ export const AdminPage = ({
             <button type="button" onClick={exportToFile}>{t.exportJson}</button>
             <label>
               {t.importToDeck}
-              <select value={importTarget} onChange={(e) => setImportTarget(e.target.value as DeckTarget)}>
+              <select
+                value={importTarget}
+                onChange={(e) => {
+                  setImportTarget(e.target.value as DeckTarget);
+                  setImportStatus('');
+                }}
+              >
                 <option value="deck">{t.mainDeck}</option>
                 <option value="legendaryDeck">{t.legendaryDeckLabel}</option>
               </select>
@@ -716,7 +1003,10 @@ export const AdminPage = ({
               {t.importCategoryLabel}
               <select
                 value={importCategoryMode}
-                onChange={(e) => setImportCategoryMode(e.target.value as ImportCategoryMode)}
+                onChange={(e) => {
+                  setImportCategoryMode(e.target.value as ImportCategoryMode);
+                  setImportStatus('');
+                }}
               >
                 <option value="AS_IS">{t.importCategoryAsIs}</option>
                 {categories.map((cat) => (
@@ -731,7 +1021,15 @@ export const AdminPage = ({
             </label>
           </p>
           {importError ? <p className="admin-error">{importError}</p> : null}
-          <textarea className="admin-textarea" value={importJson} onChange={(e) => setImportJson(e.target.value)} />
+          {importStatus ? <p className="admin-success">{importStatus}</p> : null}
+          <textarea
+            className="admin-textarea"
+            value={importJson}
+            onChange={(e) => {
+              setImportJson(e.target.value);
+              setImportStatus('');
+            }}
+          />
         </>
       ) : null}
 
@@ -744,6 +1042,222 @@ export const AdminPage = ({
           <pre className="admin-json">
             {snapshot ? JSON.stringify({ G: snapshot.G, ctx: snapshot.ctx }, null, 2) : t.noStateYet}
           </pre>
+        </>
+      ) : null}
+      {activeTab === 'ranks' ? (
+        <>
+          <h3>{t.ranksTitle}</h3>
+          <p>{t.ranksHint}</p>
+          <div className="admin-deck-list">
+            <ul>
+              {sharedRanks.map((rank, index) => (
+                <li key={`rank-${rank.id}-${index}`}>
+                  <div className="admin-inline-editor">
+                    <div className="admin-editor-grid">
+                      <label>
+                        ID
+                        <input
+                          value={rank.id}
+                          onChange={(e) => updateRankAt(index, (row) => ({ ...row, id: e.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        {lang === 'uk' ? 'Назва' : 'Name'}
+                        <input
+                          value={rank.name}
+                          onChange={(e) => updateRankAt(index, (row) => ({ ...row, name: e.target.value }))}
+                        />
+                      </label>
+                      {rankResourceKeys.map((key) => (
+                        <label key={`req-${rank.id}-${key}`}>
+                          {t.resources[key]}
+                          <input
+                            type="number"
+                            min={0}
+                            value={rank.requirement[key] ?? 0}
+                            onChange={(e) => updateRankAt(index, (row) => ({
+                              ...row,
+                              requirement: {
+                                ...row.requirement,
+                                [key]: Math.max(0, Number(e.target.value || 0)),
+                              },
+                            }))}
+                          />
+                        </label>
+                      ))}
+                      {rankResourceKeys.map((key) => (
+                        <label key={`bonus-${rank.id}-${key}`}>
+                          {`${t.rankBonusLabel} ${t.resources[key]}`}
+                          <input
+                            type="number"
+                            value={rank.bonus[key] ?? 0}
+                            onChange={(e) => updateRankAt(index, (row) => ({
+                              ...row,
+                              bonus: {
+                                ...row.bonus,
+                                [key]: Number(e.target.value || 0),
+                              },
+                            }))}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <p className="admin-controls">
+                      <button type="button" onClick={() => removeRankAt(index)} disabled={sharedRanks.length <= 1}>
+                        {t.removeCard}
+                      </button>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <h4>{t.addRank}</h4>
+          <div className="admin-inline-editor">
+            <div className="admin-editor-grid">
+              <label>
+                ID
+                <input value={rankDraft.id} onChange={(e) => setRankDraft((prev) => ({ ...prev, id: e.target.value }))} />
+              </label>
+              <label>
+                {lang === 'uk' ? 'Назва' : 'Name'}
+                <input value={rankDraft.name} onChange={(e) => setRankDraft((prev) => ({ ...prev, name: e.target.value }))} />
+              </label>
+              {rankResourceKeys.map((key) => (
+                <label key={`draft-req-${key}`}>
+                  {t.resources[key]}
+                  <input
+                    type="number"
+                    min={0}
+                    value={rankDraft.requirement[key] ?? 0}
+                    onChange={(e) => setRankDraft((prev) => ({
+                      ...prev,
+                      requirement: {
+                        ...prev.requirement,
+                        [key]: Math.max(0, Number(e.target.value || 0)),
+                      },
+                    }))}
+                  />
+                </label>
+              ))}
+              {rankResourceKeys.map((key) => (
+                <label key={`draft-bonus-${key}`}>
+                  {`${t.rankBonusLabel} ${t.resources[key]}`}
+                  <input
+                    type="number"
+                    value={rankDraft.bonus[key] ?? 0}
+                    onChange={(e) => setRankDraft((prev) => ({
+                      ...prev,
+                      bonus: {
+                        ...prev.bonus,
+                        [key]: Number(e.target.value || 0),
+                      },
+                    }))}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="admin-controls">
+              <button type="button" onClick={addRank}>{t.addRank}</button>
+              <button type="button" onClick={onResetRanks}>{t.resetRanks}</button>
+            </p>
+          </div>
+        </>
+      ) : null}
+      {activeTab === 'simulation' ? (
+        <>
+          <h3>{t.simulationTitle}</h3>
+          <p className="admin-controls">
+            <label>
+              {t.simulationPlayers}
+              <select
+                value={simulationPlayers}
+                onChange={(e) => setSimulationPlayers(Number(e.target.value))}
+                disabled={simulationRunning}
+              >
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+                <option value={6}>6</option>
+              </select>
+            </label>
+            <label>
+              {t.simulationCount}
+              <input
+                type="number"
+                min={1}
+                max={5000}
+                step={1}
+                value={simulationCount}
+                onChange={(e) => setSimulationCount(Number(e.target.value || 1))}
+                disabled={simulationRunning}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={simulationRunning}
+              onClick={() => {
+                setSimulationRunning(true);
+                setTimeout(() => {
+                  const report = onRunSimulations(simulationPlayers, simulationCount);
+                  setSimulationReport(report);
+                  setSimulationRunning(false);
+                }, 0);
+              }}
+            >
+              {simulationRunning ? t.simulationRunning : t.simulationRun}
+            </button>
+          </p>
+          <h4>{t.simulationReport}</h4>
+          {!simulationReport ? <p>{t.simulationNoReport}</p> : (
+            <div>
+              <p>
+                {lang === 'uk'
+                  ? `Виконано симуляцій: ${simulationReport.input.simulations} (гравців у матчі: ${simulationReport.input.players}).`
+                  : `Simulations: ${simulationReport.input.simulations} (players per game: ${simulationReport.input.players}).`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Завершені: ${simulationReport.summary.finished}, завислі: ${simulationReport.summary.stalled}, середня кількість ходів: ${simulationReport.summary.avgTurns}.`
+                  : `Finished: ${simulationReport.summary.finished}, stalled: ${simulationReport.summary.stalled}, average turns: ${simulationReport.summary.avgTurns}.`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Перемоги за званням: ${simulationReport.summary.rankWins}, за очками: ${simulationReport.summary.scoreWins}.`
+                  : `Rank wins: ${simulationReport.summary.rankWins}, score wins: ${simulationReport.summary.scoreWins}.`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Winrate за місцями: ${simulationReport.seatWinRates.map((row) => `#${Number(row.playerID) + 1} ${row.winRatePct}%`).join(' | ')}`
+                  : `Seat winrate: ${simulationReport.seatWinRates.map((row) => `#${Number(row.playerID) + 1} ${row.winRatePct}%`).join(' | ')}`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Переміг гравець №${Number(simulationReport.lastGame.winnerPlayerID) + 1}.`
+                  : `Winner: player #${Number(simulationReport.lastGame.winnerPlayerID) + 1}.`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Досягнуте звання: ${simulationReport.lastGame.winnerRankId}.`
+                  : `Reached rank: ${simulationReport.lastGame.winnerRankId}.`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Накопичені ресурси: час ${simulationReport.lastGame.winnerResources.time}, авторитет ${simulationReport.lastGame.winnerResources.reputation}, дисципліна ${simulationReport.lastGame.winnerResources.discipline}, документи ${simulationReport.lastGame.winnerResources.documents}, технології ${simulationReport.lastGame.winnerResources.tech}.`
+                  : `Resources: time ${simulationReport.lastGame.winnerResources.time}, reputation ${simulationReport.lastGame.winnerResources.reputation}, discipline ${simulationReport.lastGame.winnerResources.discipline}, documents ${simulationReport.lastGame.winnerResources.documents}, tech ${simulationReport.lastGame.winnerResources.tech}.`}
+              </p>
+              <p>
+                {lang === 'uk'
+                  ? `Ходів у симуляції: ${simulationReport.lastGame.turns}.`
+                  : `Turns in simulation: ${simulationReport.lastGame.turns}.`}
+              </p>
+              {simulationReport.issues.length ? (
+                <pre className="admin-json">{simulationReport.issues.join('\n')}</pre>
+              ) : null}
+            </div>
+          )}
         </>
       ) : null}
       <p>

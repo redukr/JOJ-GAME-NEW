@@ -1,0 +1,200 @@
+[
+  {
+    "id": "soldier",
+    "name": "Солдат",
+    "requirement": {
+      "reputation": 3,
+      "discipline": 2
+    },
+    "bonus": {
+      "time": -1
+    }
+  },
+  {
+    "id": "senior_soldier",
+    "name": "Старший солдат",
+    "requirement": {
+      "reputation": 4,
+      "discipline": 3
+    },
+    "bonus": {
+      "time": -2
+    }
+  },
+  {
+    "id": "junior_sergeant",
+    "name": "Молодший сержант",
+    "requirement": {
+      "reputation": 5,
+      "discipline": 3,
+      "documents": 1
+    },
+    "bonus": {
+      "time": -2
+    }
+  },
+  {
+    "id": "sergeant",
+    "name": "Сержант",
+    "requirement": {
+      "reputation": 6,
+      "discipline": 4
+    },
+    "bonus": {
+      "time": -1,
+      "documents": -1
+    }
+  },
+  {
+    "id": "senior_sergeant",
+    "name": "Старший сержант",
+    "requirement": {
+      "reputation": 7,
+      "discipline": 5
+    },
+    "bonus": {
+      "time": -2
+    }
+  },
+  {
+    "id": "chief_sergeant",
+    "name": "Головний сержант",
+    "requirement": {
+      "reputation": 8,
+      "discipline": 6,
+      "documents": 1
+    },
+    "bonus": {
+      "time": -2
+    }
+  },
+  {
+    "id": "junior_lieutenant",
+    "name": "Молодший лейтенант",
+    "requirement": {
+      "reputation": 9,
+      "discipline": 7
+    },
+    "bonus": {
+      "time": -3,
+      "documents": -1
+    }
+  },
+  {
+    "id": "lieutenant",
+    "name": "Лейтенант",
+    "requirement": {
+      "reputation": 10,
+      "discipline": 7
+    },
+    "bonus": {
+      "time": -2
+    }
+  },
+  {
+    "id": "senior_lieutenant",
+    "name": "Старший лейтенант",
+    "requirement": {
+      "reputation": 12,
+      "discipline": 8
+    },
+    "bonus": {
+      "time": -3,
+      "documents": -1
+    }
+  },
+  {
+    "id": "captain",
+    "name": "Капітан",
+    "requirement": {
+      "reputation": 13,
+      "discipline": 9
+    },
+    "bonus": {
+      "time": -3
+    }
+  },
+  {
+    "id": "major",
+    "name": "Майор",
+    "requirement": {
+      "reputation": 15,
+      "discipline": 10,
+      "tech": 1
+    },
+    "bonus": {
+      "time": -4
+    }
+  },
+  {
+    "id": "lieutenant_colonel",
+    "name": "Підполковник",
+    "requirement": {
+      "reputation": 17,
+      "discipline": 11
+    },
+    "bonus": {
+      "time": -4,
+      "documents": -1
+    }
+  },
+  {
+    "id": "colonel",
+    "name": "Полковник",
+    "requirement": {
+      "reputation": 19,
+      "discipline": 12
+    },
+    "bonus": {
+      "time": -5
+    }
+  },
+  {
+    "id": "brigadier_general",
+    "name": "Бригадний генерал",
+    "requirement": {
+      "reputation": 21,
+      "discipline": 13,
+      "tech": 1
+    },
+    "bonus": {
+      "time": -5
+    }
+  },
+  {
+    "id": "major_general",
+    "name": "Генерал-майор",
+    "requirement": {
+      "reputation": 22,
+      "discipline": 14,
+      "tech": 2
+    },
+    "bonus": {
+      "time": -5
+    }
+  },
+  {
+    "id": "lieutenant_general",
+    "name": "Генерал-лейтенант",
+    "requirement": {
+      "reputation": 23,
+      "discipline": 14
+    },
+    "bonus": {
+      "time": -6
+    }
+  },
+  {
+    "id": "army_general",
+    "name": "Генерал армії України",
+    "requirement": {
+      "reputation": 25,
+      "discipline": 15,
+      "documents": 1
+    },
+    "bonus": {
+      "time": -6,
+      "tech": -1
+    }
+  }
+]

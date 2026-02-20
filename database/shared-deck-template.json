@@ -543,6 +543,776 @@
         }
       ],
       "flavor": "Видихай рівно, вдихай повагу."
+    },
+    {
+      "id": "decision-01",
+      "title": "Зразковий рапорт",
+      "category": "DECISION",
+      "image": "/cards/decision-01.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Писав три дні, затвердили за п’ять хвилин."
+    },
+    {
+      "id": "decision-02",
+      "title": "Вдалий виступ на шикуванні",
+      "category": "DECISION",
+      "image": "/cards/decision-02.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 2
+        }
+      ],
+      "flavor": "Голос тремтів, але аплодували стоячи."
+    },
+    {
+      "id": "decision-03",
+      "title": "Перемога у спортивних змаганнях",
+      "category": "DECISION",
+      "image": "/cards/decision-03.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "time",
+          "value": 1
+        }
+      ],
+      "flavor": "Біг швидше за накази."
+    },
+    {
+      "id": "decision-04",
+      "title": "Успішний ААR",
+      "category": "DECISION",
+      "image": "/cards/decision-04.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 2
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Помилки знайшли, винних — теж."
+    },
+    {
+      "id": "decision-05",
+      "title": "Волонтерська ініціатива",
+      "category": "DECISION",
+      "image": "/cards/decision-05.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "tech",
+          "value": 1
+        }
+      ],
+      "flavor": "Авторитет росте швидше, ніж принтер друкує."
+    },
+    {
+      "id": "decision-06",
+      "title": "Публікація у військовому журналі",
+      "category": "DECISION",
+      "image": "/cards/decision-06.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Твій досвід тепер у бібліотеці Міноборони."
+    },
+    {
+      "id": "decision-07",
+      "title": "Прийняття на курс лідерства",
+      "category": "DECISION",
+      "image": "/cards/decision-07.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Після лекцій навіть командир став слухнянішим."
+    },
+    {
+      "id": "decision-08",
+      "title": "Затвердження нового SOP",
+      "category": "DECISION",
+      "image": "/cards/decision-08.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Порядок встановлено. Тимчасово."
+    },
+    {
+      "id": "decision-09",
+      "title": "Участь у навчаннях НАТО",
+      "category": "DECISION",
+      "image": "/cards/decision-09.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "tech",
+          "value": 1
+        }
+      ],
+      "flavor": "Справжня перемога — знайти перекладача."
+    },
+    {
+      "id": "decision-10",
+      "title": "Ефективне використання ресурсів",
+      "category": "DECISION",
+      "image": "/cards/decision-10.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Скоротив витрати — збільшив звіти."
+    },
+    {
+      "id": "decision-11",
+      "title": "Вдалий брифінг перед начальством",
+      "category": "DECISION",
+      "image": "/cards/decision-11.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 2
+        }
+      ],
+      "flavor": "Слайди говорили самі за себе."
+    },
+    {
+      "id": "decision-12",
+      "title": "Відмінна інвентаризація",
+      "category": "DECISION",
+      "image": "/cards/decision-12.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Пораховано навіть повітря в шафі."
+    },
+    {
+      "id": "decision-13",
+      "title": "Курс з кібербезпеки",
+      "category": "DECISION",
+      "image": "/cards/decision-13.png",
+      "effects": [
+        {
+          "resource": "tech",
+          "value": 2
+        }
+      ],
+      "flavor": "Тепер навіть принтер не ризикує зламуватись."
+    },
+    {
+      "id": "decision-14",
+      "title": "Відзнака командира",
+      "category": "DECISION",
+      "image": "/cards/decision-14.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 2
+        }
+      ],
+      "flavor": "Підписав грамоту без єдиної помилки."
+    },
+    {
+      "id": "decision-15",
+      "title": "Призначення на нову посаду",
+      "category": "DECISION",
+      "image": "/cards/decision-15.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Більше відповідальності, менше вихідних."
+    },
+    {
+      "id": "decision-16",
+      "title": "Успішний аудит холодильника",
+      "category": "DECISION",
+      "image": "/cards/decision-16.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Вперше все зійшлося — навіть списане."
+    },
+    {
+      "id": "decision-17",
+      "title": "Підтримка волонтерів",
+      "category": "DECISION",
+      "image": "/cards/decision-17.png",
+      "effects": [
+        {
+          "resource": "tech",
+          "value": 1
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Замість наказу — подяка у Facebook."
+    },
+    {
+      "id": "decision-18",
+      "title": "Вдале інтерв’ю для преси",
+      "category": "DECISION",
+      "image": "/cards/decision-18.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Головне — щоб начальство не читало."
+    },
+    {
+      "id": "decision-19",
+      "title": "Успішна сертифікація підрозділу",
+      "category": "DECISION",
+      "image": "/cards/decision-19.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 2
+        }
+      ],
+      "flavor": "Всі стояли рівно. Навіть документи."
+    },
+    {
+      "id": "decision-20",
+      "title": "Покращення побутових умов",
+      "category": "DECISION",
+      "image": "/cards/decision-20.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Справжня розкіш — гаряча вода й порядок у журналах."
+    },
+    {
+      "id": "decision-21",
+      "title": "Перенесення термінів",
+      "category": "DECISION",
+      "image": "/cards/decision-21.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        },
+        {
+          "resource": "time",
+          "value": 1
+        }
+      ],
+      "flavor": "Приїхали, побачили, написали акт."
+    },
+    {
+      "id": "decision-22",
+      "title": "Ротація командирів",
+      "category": "DECISION",
+      "image": "/cards/decision-22.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Ніхто не знає, хто головний, але всі при ділі."
+    },
+    {
+      "id": "decision-23",
+      "title": "Новий наказ про реформу",
+      "category": "DECISION",
+      "image": "/cards/decision-23.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Змінюємо все, крім тих, хто змінює."
+    },
+    {
+      "id": "support-01",
+      "title": "Моральна підтримка",
+      "category": "SUPPORT",
+      "image": "/cards/support-01.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Слова “тримайся” офіційно визнані методом лікування."
+    },
+    {
+      "id": "support-02",
+      "title": "Кавопауза",
+      "category": "SUPPORT",
+      "image": "/cards/support-02.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Кава — паливо у системі мотивації."
+    },
+    {
+      "id": "support-03",
+      "title": "Психологічний тренінг",
+      "category": "SUPPORT",
+      "image": "/cards/support-03.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Тепер навіть стрес пише рапорт перед приходом."
+    },
+    {
+      "id": "support-04",
+      "title": "Виховна година",
+      "category": "SUPPORT",
+      "image": "/cards/support-04.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Коли командир говорить — мораль росте."
+    },
+    {
+      "id": "support-05",
+      "title": "Спільна вечеря",
+      "category": "SUPPORT",
+      "image": "/cards/support-05.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Навіть борщ підписаний начальником чергування."
+    },
+    {
+      "id": "support-06",
+      "title": "Лікарська довідка",
+      "category": "SUPPORT",
+      "image": "/cards/support-06.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Підстава для вихідного — найкраща мотивація."
+    },
+    {
+      "id": "support-07",
+      "title": "Підміна чергового",
+      "category": "SUPPORT",
+      "image": "/cards/support-07.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Героїзм починається з фрази “я постою замість тебе.”"
+    },
+    {
+      "id": "support-08",
+      "title": "Бойове братерство",
+      "category": "SUPPORT",
+      "image": "/cards/support-08.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Довіра — найкраща зброя проти хаосу."
+    },
+    {
+      "id": "support-09",
+      "title": "Військовий капелан",
+      "category": "SUPPORT",
+      "image": "/cards/support-09.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Навіть рапорт читається з благословенням."
+    },
+    {
+      "id": "support-10",
+      "title": "Порада від старшини",
+      "category": "SUPPORT",
+      "image": "/cards/support-10.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Просто роби, як я кажу, і будеш як я."
+    },
+    {
+      "id": "support-11",
+      "title": "Відновлення документів",
+      "category": "SUPPORT",
+      "image": "/cards/support-11.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 2
+        }
+      ],
+      "flavor": "Усе загублене знайдено у резервній папці."
+    },
+    {
+      "id": "support-12",
+      "title": "Сміх у строю",
+      "category": "SUPPORT",
+      "image": "/cards/support-12.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Сміх подовжує строк служби."
+    },
+    {
+      "id": "support-13",
+      "title": "Психологічна розрядка",
+      "category": "SUPPORT",
+      "image": "/cards/support-13.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Після крику в подушку все стає ясніше."
+    },
+    {
+      "id": "support-14",
+      "title": "Діловод з досвідом",
+      "category": "SUPPORT",
+      "image": "/cards/support-14.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        },
+        {
+          "resource": "time",
+          "value": 1
+        }
+      ],
+      "flavor": "Оформить навіть думку начальника."
+    },
+    {
+      "id": "support-15",
+      "title": "Аудит реальності",
+      "category": "SUPPORT",
+      "image": "/cards/support-15.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Виявлено відсутність здорового глузду. Задокументовано."
+    },
+    {
+      "id": "support-16",
+      "title": "Перерозподіл завдань",
+      "category": "SUPPORT",
+      "image": "/cards/support-16.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        }
+      ],
+      "flavor": "Тепер хаос має чергового відповідального."
+    },
+    {
+      "id": "support-17",
+      "title": "Волонтерська допомога",
+      "category": "SUPPORT",
+      "image": "/cards/support-17.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        },
+        {
+          "resource": "tech",
+          "value": 1
+        }
+      ],
+      "flavor": "Коли все згоріло — волонтери вже в дорозі."
+    },
+    {
+      "id": "support-18",
+      "title": "Командирський обхід",
+      "category": "SUPPORT",
+      "image": "/cards/support-18.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Головне — не зустріти командира між обходами."
+    },
+    {
+      "id": "support-19",
+      "title": "Звіт за зразком НАТО",
+      "category": "SUPPORT",
+      "image": "/cards/support-19.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Половину не зрозумів, але виглядає професійно."
+    },
+    {
+      "id": "support-20",
+      "title": "Підпис у три примірники",
+      "category": "SUPPORT",
+      "image": "/cards/support-20.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        }
+      ],
+      "flavor": "Наказ, копія, дублікат — триєдність бюрократії."
+    },
+    {
+      "id": "support-21",
+      "title": "Залучення резерву часу",
+      "category": "SUPPORT",
+      "image": "/cards/support-21.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 2
+        }
+      ],
+      "flavor": "Знайшли годину між нарадами."
+    },
+    {
+      "id": "support-22",
+      "title": "Оптимізація звітності",
+      "category": "SUPPORT",
+      "image": "/cards/support-22.png",
+      "effects": [
+        {
+          "resource": "time",
+          "value": 1
+        },
+        {
+          "resource": "documents",
+          "value": 1
+        }
+      ],
+      "flavor": "Скорочено звіти на 20 %. Збільшено їх кількість удвічі."
+    },
+    {
+      "id": "support-23",
+      "title": "Внутрішній аудит документів",
+      "category": "SUPPORT",
+      "image": "/cards/support-23.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 2
+        }
+      ],
+      "flavor": "Документи впорядковано так, що тепер їх не знайдеш."
+    },
+    {
+      "id": "support-24",
+      "title": "Звіт до звіту про звіт",
+      "category": "SUPPORT",
+      "image": "/cards/support-24.png",
+      "effects": [
+        {
+          "resource": "documents",
+          "value": 1
+        },
+        {
+          "resource": "time",
+          "value": -1
+        }
+      ],
+      "flavor": "Рівень контролю: ∞."
+    },
+    {
+      "id": "support-25",
+      "title": "Позапланове ААR",
+      "category": "SUPPORT",
+      "image": "/cards/support-25.png",
+      "effects": [
+        {
+          "resource": "reputation",
+          "value": 2
+        },
+        {
+          "resource": "time",
+          "value": -1
+        }
+      ],
+      "flavor": "Після аналізу зрозуміли, що аналіз зайняв усе вікно."
+    },
+    {
+      "id": "support-26",
+      "title": "Польове налагодження Excel",
+      "category": "SUPPORT",
+      "image": "/cards/support-26.png",
+      "effects": [
+        {
+          "resource": "tech",
+          "value": 1
+        }
+      ],
+      "flavor": "Таблиця перемогла людський фактор."
+    },
+    {
+      "id": "support-27",
+      "title": "Контрольний збір рапортів",
+      "category": "SUPPORT",
+      "image": "/cards/support-27.png",
+      "effects": [
+        {
+          "resource": "discipline",
+          "value": 1
+        },
+        {
+          "resource": "reputation",
+          "value": 1
+        }
+      ],
+      "flavor": "Тепер усі рапорти на місці, але ніхто не знає де."
     }
   ],
   "legendaryDeck": [],

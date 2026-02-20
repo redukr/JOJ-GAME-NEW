@@ -105,7 +105,7 @@ body {
 .pile-card {
   width: min(100%, 190px);
   margin: 0 auto;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 352 / 540;
   max-height: 250px;
   border: 1px solid #98a2b3;
   border-radius: 8px;
@@ -161,7 +161,7 @@ body {
 
 .game-card-media {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 352 / 540;
   border: 1px solid #d0d5dd;
   border-radius: 6px;
   overflow: hidden;
@@ -416,4 +416,44 @@ body {
 .admin-error {
   color: #b42318;
   font-weight: 600;
+}
+
+.admin-success {
+  color: #027a48;
+  font-weight: 600;
+}
+
+.admin-crop-editor {
+  grid-column: 1 / -1;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.admin-crop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.admin-crop-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-crop-grid input {
+  padding: 6px;
+}
+
+.admin-crop-preview {
+  display: block;
+  width: min(352px, 100%);
+  height: auto;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #f8fafc;
+  margin-bottom: 8px;
 }

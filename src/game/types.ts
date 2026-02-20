@@ -34,6 +34,7 @@ export interface Rank {
   name: string;
   requirement: Partial<Record<ResourceKey, number>>;
   cost: Partial<Record<ResourceKey, number>>;
+  bonus: Partial<Record<ResourceKey, number>>;
 }
 
 export interface JOJState {
@@ -41,6 +42,7 @@ export interface JOJState {
   discard: Card[];
   legendaryDeck: Card[];
   deckBackImage?: string;
+  systemMessageSeq: number;
   playerNames: Record<string, string>;
   chat: Array<{
     id: string;

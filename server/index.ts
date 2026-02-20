@@ -3,10 +3,13 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   exportSharedDeckTemplateJson,
+  getSharedRanks,
   getSharedDeckTemplateStats,
   importSharedDeckTemplateJson,
   jojGame,
+  resetSharedRanks,
   resetSharedDeckTemplate,
+  setSharedRanks,
 } from '../src/game/jojGame';
 
 const require = createRequire(import.meta.url);
@@ -22,6 +25,7 @@ const server = Server({
 });
 const router = (server as { router?: any }).router;
 const templatePath = path.resolve(process.cwd(), 'database', 'shared-deck-template.json');
+const ranksPath = path.resolve(process.cwd(), 'database', 'shared-ranks.json');
 
 const readJsonBody = async (ctx: any): Promise<Record<string, unknown>> => {
   const existingBody = ctx?.request?.body;
@@ -55,6 +59,11 @@ const saveTemplateToDisk = async () => {
   await writeFile(templatePath, exportSharedDeckTemplateJson(), 'utf8');
 };
 
+const saveRanksToDisk = async () => {
+  await mkdir(path.dirname(ranksPath), { recursive: true });
+  await writeFile(ranksPath, JSON.stringify(getSharedRanks(), null, 2), 'utf8');
+};
+
 const loadTemplateFromDisk = async () => {
   try {
     const raw = await readFile(templatePath, 'utf8');
@@ -69,12 +78,90 @@ const loadTemplateFromDisk = async () => {
   }
 };
 
+const loadRanksFromDisk = async () => {
+  try {
+    const raw = await readFile(ranksPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const ok = setSharedRanks(parsed);
+    if (!ok) {
+      // eslint-disable-next-line no-console
+      console.warn('[ranks] invalid saved ranks, fallback to default');
+      resetSharedRanks();
+      await saveRanksToDisk();
+    }
+  } catch {
+    await saveRanksToDisk();
+  }
+};
+
 if (router) {
+  router.get('/api/admin/match-state', async (ctx: any) => {
+    const matchID = typeof ctx?.query?.matchID === 'string' ? ctx.query.matchID : '';
+    if (!matchID) {
+      ctx.status = 400;
+      ctx.body = { ok: false, error: 'Missing matchID' };
+      return;
+    }
+
+    const db = ctx?.db ?? ctx?.app?.context?.db;
+    if (!db || typeof db.fetch !== 'function') {
+      ctx.status = 500;
+      ctx.body = { ok: false, error: 'Database is unavailable' };
+      return;
+    }
+
+    const fetched = await db.fetch(matchID, { state: true, metadata: true });
+    const state = fetched?.state;
+    const metadata = fetched?.metadata;
+    if (!state) {
+      ctx.status = 404;
+      ctx.body = { ok: false, error: 'Match not found' };
+      return;
+    }
+
+    ctx.body = {
+      ok: true,
+      snapshot: {
+        G: state.G,
+        ctx: state.ctx,
+        updatedAt: metadata?.updatedAt ?? Date.now(),
+      },
+    };
+  });
+
   router.get('/api/shared-deck-template', (ctx: any) => {
     ctx.body = {
       json: exportSharedDeckTemplateJson(),
       stats: getSharedDeckTemplateStats(),
     };
+  });
+
+  router.get('/api/shared-ranks', (ctx: any) => {
+    ctx.body = { ranks: getSharedRanks() };
+  });
+
+  router.post('/api/shared-ranks', async (ctx: any) => {
+    const body = await readJsonBody(ctx);
+    const ranks = body.ranks;
+    if (!Array.isArray(ranks)) {
+      ctx.status = 400;
+      ctx.body = { ok: false, error: 'Missing ranks array' };
+      return;
+    }
+    const ok = setSharedRanks(ranks);
+    if (!ok) {
+      ctx.status = 400;
+      ctx.body = { ok: false, error: 'Invalid ranks schema' };
+      return;
+    }
+    await saveRanksToDisk();
+    ctx.body = { ok: true, ranks: getSharedRanks() };
+  });
+
+  router.post('/api/shared-ranks/reset', async (ctx: any) => {
+    resetSharedRanks();
+    await saveRanksToDisk();
+    ctx.body = { ok: true, ranks: getSharedRanks() };
   });
 
   router.post('/api/shared-deck-template/import', async (ctx: any) => {
@@ -113,6 +200,7 @@ const port = Number(process.env.PORT ?? 8000);
 
 void (async () => {
   await loadTemplateFromDisk();
+  await loadRanksFromDisk();
   server.run(port, () => {
     // eslint-disable-next-line no-console
     console.log(`boardgame.io server running at http://localhost:${port}`);

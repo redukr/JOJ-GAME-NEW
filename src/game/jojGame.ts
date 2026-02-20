@@ -1,13 +1,15 @@
 import type { Ctx, Game } from 'boardgame.io';
 import { baseDeck, legendaryCards } from './cards';
-import { GENERAL_RANK_ID, ranks } from './ranks';
-import type { CardDefinition, JojGameState, ResourceKey } from './types';
+import { GENERAL_RANK_ID, ranks as baseRanks } from './ranks';
+import type { CardDefinition, JojGameState, RankDefinition, ResourceKey } from './types';
 
 const INVALID_MOVE = 'INVALID_MOVE' as const;
 const STARTING_HAND_SIZE = 5;
 const HAND_LIMIT = 8;
 const DRAW_STAGE = 'draw';
 const PLAY_STAGE = 'play';
+const END_STAGE = 'end';
+const IDLE_STAGE = 'idle';
 const CHAT_LIMIT = 200;
 
 const resourceKeys: ResourceKey[] = ['time', 'reputation', 'discipline', 'documents', 'tech'];
@@ -18,6 +20,48 @@ const resourceLabelsUk: Record<ResourceKey, string> = {
   documents: 'Документи',
   tech: 'Технології',
 };
+const lyapIntros = [
+  'Бюрократичний всесвіт тихо поплескав у долоні',
+  'Канцелярський маятник хитнувся не в той бік',
+  'Архівні боги перегорнули сторінку з виразом "ой-йой"',
+  'Службовий таймер ввічливо нагадав, що ідеальність переоцінена',
+  'Печатка долі поставила штамп "з несподіванкою"',
+];
+const scandalIntros = [
+  'Інфопривід вийшов у прямий ефір без попередження',
+  'Редакція внутрішніх мемів отримала новий сюжет',
+  'Пресслужба попросила всіх дихати рівно, але запізно',
+  'Новина дня постукала в двері й одразу зайшла',
+  'У стрічці подій раптом зʼявився розділ "гаряче"',
+];
+const lyapClosers = [
+  'Кава зробила вигляд, що це просто планове тренування.',
+  'Папки зберегли спокій, але нервово.',
+  'Протокол зітхнув і пішов на другу ітерацію.',
+  'Саркастичний метроном урочисто відбив такт.',
+  'Усе під контролем. Майже.',
+];
+const scandalClosers = [
+  'Нарада офіційно отримала новий порядок денний.',
+  'Система не панікує, вона "динамічно адаптується".',
+  'Журнали попросили додаткову закладку для епічних моментів.',
+  'Офіційна версія: так і було задумано.',
+  'Робоча атмосфера стала помітно сюжетнішою.',
+];
+const supportIntros = [
+  'Штаб добрих намірів увімкнув режим допомоги',
+  'Логістика посміхнулась і кивнула',
+  'Канцелярський всесвіт раптом став трохи людянішим',
+  'Система зробила вигляд, що все під контролем, і це спрацювало',
+  'Внутрішній відділ підтримки відповів швидше, ніж очікували',
+];
+const decisionIntros = [
+  'Командний вектор урочисто встановлено',
+  'Рішення командування набрало чинності раніше за чутки',
+  'Офіційний курс змінився з формулюванням "без паніки"',
+  'Папка "терміново" відкрилась сама',
+  'Керівна думка приземлилась точно в ціль',
+];
 
 export const normalizeImagePath = (input?: string): string | undefined => {
   if (!input) return undefined;
@@ -41,7 +85,17 @@ const cloneCard = (card: CardDefinition): CardDefinition => ({
   effects: card.effects?.map((effect) => ({ ...effect })),
 });
 
-const getPlayerLabel = (G: JojGameState, playerID: string) => G.playerNames[playerID] || `Гравець #${playerID}`;
+const cloneRank = (rank: RankDefinition): RankDefinition => ({
+  ...rank,
+  requirement: { ...rank.requirement },
+  cost: { ...rank.cost },
+  bonus: { ...rank.bonus },
+});
+
+const getPlayerLabel = (G: JojGameState, playerID: string) => {
+  const name = G.playerNames[playerID]?.trim();
+  return name || 'Гравець';
+};
 
 const appendChat = (
   G: JojGameState,
@@ -58,13 +112,28 @@ const appendChat = (
   }
 };
 
+const nextSystemMessageSeq = (G: JojGameState): number => {
+  const next = (G.systemMessageSeq ?? 0) + 1;
+  G.systemMessageSeq = next;
+  return next;
+};
+
+const stableIndex = (seed: string, modulo: number): number => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return modulo > 0 ? h % modulo : 0;
+};
+
 type SharedDeckTemplate = {
   deck: CardDefinition[];
   legendaryDeck: CardDefinition[];
   deckBackImage?: string;
 };
 
-export type DeckTarget = keyof SharedDeckTemplate;
+export type DeckTarget = 'deck' | 'legendaryDeck';
+export type SharedRanks = RankDefinition[];
 
 const defaultSharedDeckTemplate = (): SharedDeckTemplate => ({
   deck: baseDeck.map(cloneCard),
@@ -73,6 +142,64 @@ const defaultSharedDeckTemplate = (): SharedDeckTemplate => ({
 });
 
 let sharedDeckTemplate: SharedDeckTemplate = defaultSharedDeckTemplate();
+let sharedRanks: SharedRanks = baseRanks.map(cloneRank);
+
+const getActiveRanks = (): SharedRanks => sharedRanks;
+const getTopRankId = (): string => {
+  const active = getActiveRanks();
+  return active[active.length - 1]?.id ?? GENERAL_RANK_ID;
+};
+
+const isValidRank = (rank: unknown): rank is RankDefinition => {
+  if (!rank || typeof rank !== 'object') return false;
+  const raw = rank as Record<string, unknown>;
+  if (typeof raw.id !== 'string' || !raw.id.trim()) return false;
+  if (typeof raw.name !== 'string' || !raw.name.trim()) return false;
+  if (!raw.requirement || typeof raw.requirement !== 'object') return false;
+  if (raw.cost !== undefined && (!raw.cost || typeof raw.cost !== 'object')) return false;
+  if (raw.bonus !== undefined && (!raw.bonus || typeof raw.bonus !== 'object')) return false;
+  const req = raw.requirement as Record<string, unknown>;
+  const costSource = (raw.cost as Record<string, unknown> | undefined) ?? {};
+  const bonusSource = (raw.bonus as Record<string, unknown> | undefined) ?? {};
+  for (const key of Object.keys(req)) {
+    if (!resourceKeys.includes(key as ResourceKey)) return false;
+    if (typeof req[key] !== 'number') return false;
+  }
+  for (const key of Object.keys(costSource)) {
+    if (!resourceKeys.includes(key as ResourceKey)) return false;
+    if (typeof costSource[key] !== 'number') return false;
+  }
+  for (const key of Object.keys(bonusSource)) {
+    if (!resourceKeys.includes(key as ResourceKey)) return false;
+    if (typeof bonusSource[key] !== 'number') return false;
+  }
+  return true;
+};
+
+export const getSharedRanks = (): SharedRanks => sharedRanks.map(cloneRank);
+
+export const setSharedRanks = (next: SharedRanks): boolean => {
+  if (!Array.isArray(next) || next.length === 0) return false;
+  if (!next.every((rank) => isValidRank(rank))) return false;
+  const ids = next.map((rank) => rank.id.trim());
+  if (new Set(ids).size !== ids.length) return false;
+  sharedRanks = next.map((rank) => {
+    const cost = rank.cost ? { ...rank.cost } : {};
+    const bonus = rank.bonus ? { ...rank.bonus } : {};
+    return cloneRank({
+      ...rank,
+      id: rank.id.trim(),
+      name: rank.name.trim(),
+      cost,
+      bonus,
+    });
+  });
+  return true;
+};
+
+export const resetSharedRanks = () => {
+  sharedRanks = baseRanks.map(cloneRank);
+};
 
 const buildCardCatalog = (template: SharedDeckTemplate): CardDefinition[] => {
   const byId = new Map<string, CardDefinition>();
@@ -254,10 +381,12 @@ const shuffle = <T,>(items: T[]): T[] => {
 const hasResources = (resources: Record<ResourceKey, number>, cost: Partial<Record<ResourceKey, number>>): boolean =>
   resourceKeys.every((key) => (resources[key] ?? 0) >= (cost[key] ?? 0));
 
-const spendResources = (resources: Record<ResourceKey, number>, cost: Partial<Record<ResourceKey, number>>) => {
+const applyResourceDelta = (
+  resources: Record<ResourceKey, number>,
+  delta: Partial<Record<ResourceKey, number>>,
+) => {
   resourceKeys.forEach((key) => {
-    const value = cost[key] ?? 0;
-    resources[key] -= Math.abs(value);
+    resources[key] += delta[key] ?? 0;
   });
 };
 
@@ -294,9 +423,9 @@ export const getReplacementUnitsForCard = (
 
 const shiftRank = (G: JojGameState, playerID: string, delta: number) => {
   if (delta === 0) return;
+  const ranks = getActiveRanks();
   const currentRankId = G.ranks[playerID];
-  const currentRankIdx = ranks.findIndex((r) => r.id === currentRankId);
-  if (currentRankIdx < 0) return;
+  const currentRankIdx = Math.max(0, ranks.findIndex((r) => r.id === currentRankId));
   const nextIdx = Math.max(0, Math.min(ranks.length - 1, currentRankIdx + delta));
   G.ranks[playerID] = ranks[nextIdx].id;
 };
@@ -392,6 +521,127 @@ const effectSummaryToText = (summary: { resources: Partial<Record<ResourceKey, n
   return parts.length > 0 ? parts.join(', ') : 'без змін';
 };
 
+const summarizeAppliedDiff = (
+  beforeResources: Record<ResourceKey, number>,
+  afterResources: Record<ResourceKey, number>,
+  beforeRankId: string,
+  afterRankId: string,
+): { resources: Partial<Record<ResourceKey, number>>; rank: number } => {
+  const summary: { resources: Partial<Record<ResourceKey, number>>; rank: number } = { resources: {}, rank: 0 };
+  resourceKeys.forEach((key) => {
+    const delta = (afterResources[key] ?? 0) - (beforeResources[key] ?? 0);
+    if (delta !== 0) summary.resources[key] = delta;
+  });
+  const ranks = getActiveRanks();
+  const from = ranks.findIndex((row) => row.id === beforeRankId);
+  const to = ranks.findIndex((row) => row.id === afterRankId);
+  if (from >= 0 && to >= 0) {
+    summary.rank = to - from;
+  }
+  return summary;
+};
+
+const categoryLabelUk = (category: CardDefinition['category']) => {
+  switch (category) {
+    case 'LYAP':
+      return 'ЛЯП';
+    case 'SCANDAL':
+      return 'СКАНДАЛ';
+    case 'SUPPORT':
+      return 'ПІДТРИМКА';
+    case 'DECISION':
+      return 'РІШЕННЯ';
+    case 'NEUTRAL':
+      return 'НЕЙТРАЛЬНА';
+    case 'VVNZ':
+      return 'ВВНЗ';
+    case 'LEGENDARY':
+      return 'ЛЕГЕНДАРНА';
+    default:
+      return category;
+  }
+};
+
+const cardFlavorSnippet = (card: CardDefinition) => {
+  const raw = card.flavor?.trim();
+  if (!raw) return 'без офіційного коментаря';
+  return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
+};
+
+const buildLyapSystemMessage = (
+  seq: number,
+  playerLabel: string,
+  card: CardDefinition,
+  summary: { resources: Partial<Record<ResourceKey, number>>; rank: number },
+) => {
+  const seed = `${seq}:${card.id}:${card.title}:lyap`;
+  const intro = lyapIntros[stableIndex(seed, lyapIntros.length)];
+  const closer = lyapClosers[stableIndex(`${seed}:closer`, lyapClosers.length)];
+  const category = categoryLabelUk(card.category);
+  const flavor = cardFlavorSnippet(card);
+  return `⚠️ [${seq}] ${intro}: ${playerLabel} дістав «${card.title}» (${category}). Цитата з польового щоденника: "${flavor}". Ефект: ${effectSummaryToText(summary)}. ${closer}`;
+};
+
+const buildScandalSystemMessage = (
+  seq: number,
+  playerLabel: string,
+  card: CardDefinition,
+  targetSummaries: string[],
+) => {
+  const seed = `${seq}:${card.id}:${card.title}:scandal`;
+  const intro = scandalIntros[stableIndex(seed, scandalIntros.length)];
+  const closer = scandalClosers[stableIndex(`${seed}:closer`, scandalClosers.length)];
+  const category = categoryLabelUk(card.category);
+  const flavor = cardFlavorSnippet(card);
+  return `🗞️ [${seq}] ${intro}: ${playerLabel} підняв «${card.title}» (${category}). Нотатка редакції: "${flavor}". Кому прилетіло: ${targetSummaries.join(' | ')}. ${closer}`;
+};
+
+const buildSupportSystemMessage = (
+  seq: number,
+  playerLabel: string,
+  card: CardDefinition,
+  summary: { resources: Partial<Record<ResourceKey, number>>; rank: number },
+) => {
+  const seed = `${seq}:${card.id}:${card.title}:support`;
+  const intro = supportIntros[stableIndex(seed, supportIntros.length)];
+  const category = categoryLabelUk(card.category);
+  const flavor = cardFlavorSnippet(card);
+  return `🤝 [${seq}] ${intro}: ${playerLabel} розіграв «${card.title}» (${category}). Коментар: "${flavor}". Ефект: ${effectSummaryToText(summary)}.`;
+};
+
+const buildPlayedLyapSystemMessage = (
+  seq: number,
+  sourcePlayerLabel: string,
+  targetPlayerLabel: string,
+  card: CardDefinition,
+  summary: { resources: Partial<Record<ResourceKey, number>>; rank: number },
+) => {
+  const category = categoryLabelUk(card.category);
+  const flavor = cardFlavorSnippet(card);
+  return `🎯 [${seq}] ${sourcePlayerLabel} розіграв «${card.title}» (${category}) на ${targetPlayerLabel}. "${flavor}". Ефект: ${effectSummaryToText(summary)}.`;
+};
+
+const buildPlayedScandalSystemMessage = (
+  seq: number,
+  sourcePlayerLabel: string,
+  card: CardDefinition,
+  targetSummaries: string[],
+) => {
+  const category = categoryLabelUk(card.category);
+  const flavor = cardFlavorSnippet(card);
+  return `📣 [${seq}] ${sourcePlayerLabel} запустив «${card.title}» (${category}) по столу. "${flavor}". Кому прилетіло: ${targetSummaries.join(' | ')}.`;
+};
+
+const buildPlayedDecisionSystemMessage = (
+  seq: number,
+  sourcePlayerLabel: string,
+  card: CardDefinition,
+  targetSummaries: string[],
+) => {
+  const flavor = cardFlavorSnippet(card);
+  return `🧭 [${seq}] ${sourcePlayerLabel} оголосив «${card.title}» (РІШЕННЯ КОМАНДУВАННЯ). "${flavor}". Наслідки для столу: ${targetSummaries.join(' | ')}.`;
+};
+
 const drawCards = (G: JojGameState, playerID: string, amount: number): void => {
   for (let i = 0; i < amount; i += 1) {
     if (G.deck.length === 0) break;
@@ -407,23 +657,23 @@ const syncPlayerState = (G: JojGameState, playerID: string): void => {
 };
 
 const promoteRank = (G: JojGameState, playerID: string): boolean => {
+  const ranks = getActiveRanks();
   const currentRankId = G.ranks[playerID];
-  const currentRankIdx = ranks.findIndex((r) => r.id === currentRankId);
+  const currentRankIdx = Math.max(0, ranks.findIndex((r) => r.id === currentRankId));
   const nextRank = ranks[currentRankIdx + 1];
   if (!nextRank) return false;
 
   const playerResources = G.resources[playerID];
   if (!hasResources(playerResources, nextRank.requirement)) return false;
-  if (!hasResources(playerResources, nextRank.cost)) return false;
-
-  spendResources(playerResources, nextRank.cost);
+  applyResourceDelta(playerResources, nextRank.bonus);
   G.ranks[playerID] = nextRank.id;
   syncPlayerState(G, playerID);
   return true;
 };
 
 const getWinner = (G: JojGameState): string | undefined => {
-  const generalPlayer = Object.entries(G.ranks).find(([, rankId]) => rankId === GENERAL_RANK_ID)?.[0];
+  const topRankId = getTopRankId();
+  const generalPlayer = Object.entries(G.ranks).find(([, rankId]) => rankId === topRankId)?.[0];
   if (generalPlayer) return generalPlayer;
   if (G.deck.length === 0) {
     const hasCardsInHands = Object.values(G.hands).some((hand) => hand.length > 0);
@@ -435,6 +685,333 @@ const getWinner = (G: JojGameState): string | undefined => {
       .at(0)?.[0];
   }
   return undefined;
+};
+
+export type SimulationReport = {
+  input: {
+    players: number;
+    simulations: number;
+    maxTurns: number;
+  };
+  generatedAt: string;
+  summary: {
+    finished: number;
+    stalled: number;
+    avgTurns: number;
+    avgDeckDepletionTurn: number;
+    rankWins: number;
+    scoreWins: number;
+    avgPassesPerGame: number;
+  };
+  seatWinRates: Array<{
+    playerID: string;
+    wins: number;
+    winRatePct: number;
+  }>;
+  rankReached: Record<string, number>;
+  lastGame: {
+    winnerPlayerID: string;
+    winnerRankId: string;
+    winnerResources: Record<ResourceKey, number>;
+    turns: number;
+  };
+  issues: string[];
+};
+
+const chooseLyapTarget = (G: JojGameState, sourcePlayerID: string): string | null => {
+  const activeRanks = getActiveRanks();
+  const rankIndex = (playerID: string) => activeRanks.findIndex((r) => r.id === G.ranks[playerID]);
+  const score = (playerID: string) =>
+    resourceKeys.reduce((sum, key) => sum + (G.resources[playerID][key] ?? 0), 0) + rankIndex(playerID) * 2;
+  const candidates = Object.keys(G.players).filter((pid) => pid !== sourcePlayerID);
+  if (!candidates.length) return null;
+  return [...candidates].sort((a, b) => score(b) - score(a))[0];
+};
+
+const buildReplacementPlan = (
+  resources: Record<ResourceKey, number>,
+  effects: CardDefinition['effects'],
+): ResourceKey[] | null => {
+  if (!effects?.length) return [];
+  const virtual = { ...resources };
+  const replacements: ResourceKey[] = [];
+
+  for (const effect of effects) {
+    if (effect.resource === 'rank' || effect.value >= 0) continue;
+    let required = Math.abs(effect.value);
+    const available = Math.max(0, virtual[effect.resource]);
+    const direct = Math.min(available, required);
+    virtual[effect.resource] -= direct;
+    required -= direct;
+
+    while (required > 0) {
+      for (let i = 0; i < 2; i += 1) {
+        const pick = [...resourceKeys]
+          .sort((a, b) => virtual[b] - virtual[a])
+          .find((key) => virtual[key] > 0);
+        if (!pick) return null;
+        virtual[pick] -= 1;
+        replacements.push(pick);
+      }
+      required -= 1;
+    }
+  }
+
+  return replacements;
+};
+
+const simulateSingleMatch = (
+  numPlayers: number,
+  maxTurns: number,
+): {
+  winner: string;
+  turns: number;
+  stalled: boolean;
+  deckDepletionTurn: number;
+  wonByRank: boolean;
+  passes: number;
+  reachedRanks: Record<string, string>;
+  finalResources: Record<string, Record<ResourceKey, number>>;
+} => {
+  const playerIDs = Array.from({ length: numPlayers }, (_, i) => String(i));
+  const G: JojGameState = {
+    deck: shuffle(sharedDeckTemplate.deck.map(cloneCard)),
+    discard: [],
+    legendaryDeck: shuffle(sharedDeckTemplate.legendaryDeck.map(cloneCard)),
+    deckBackImage: sharedDeckTemplate.deckBackImage,
+    systemMessageSeq: 0,
+    playerNames: {},
+    chat: [],
+    players: {},
+    hands: {},
+    ranks: {},
+    resources: {},
+  };
+
+  playerIDs.forEach((pid, index) => {
+    G.hands[pid] = [];
+    G.ranks[pid] = getActiveRanks()[0]?.id ?? 'cadet';
+    G.resources[pid] = { time: 2, reputation: 2, discipline: 2, documents: 2, tech: 2 };
+    G.players[pid] = { hand: G.hands[pid], rankId: G.ranks[pid], resources: G.resources[pid] };
+    G.playerNames[pid] = `P${index + 1}`;
+    drawCards(G, pid, STARTING_HAND_SIZE);
+    syncPlayerState(G, pid);
+  });
+
+  let currentIdx = 0;
+  let turns = 0;
+  let deckDepletionTurn = -1;
+  let passes = 0;
+
+  while (turns < maxTurns) {
+    const playerID = playerIDs[currentIdx];
+    const hand = G.hands[playerID];
+    let stage: 'play' | 'end' = 'play';
+
+    if (G.deck.length > 0) {
+      const card = G.deck.pop();
+      if (card) {
+        if (card.category === 'LYAP') {
+          applyCardEffectsSoft(G, playerID, card.effects);
+          G.discard.push(card);
+          stage = 'end';
+        } else if (card.category === 'SCANDAL') {
+          playerIDs.forEach((pid) => {
+            applyCardEffectsSoft(G, pid, card.effects);
+            syncPlayerState(G, pid);
+          });
+          G.discard.push(card);
+          stage = 'end';
+        } else {
+          hand.push(card);
+          stage = 'play';
+        }
+      }
+      if (G.deck.length === 0 && deckDepletionTurn < 0) {
+        deckDepletionTurn = turns + 1;
+      }
+    }
+
+    if (stage === 'play') {
+      let played = false;
+      for (let i = 0; i < hand.length; i += 1) {
+        const card = hand[i];
+        const allPlayerIDs = playerIDs;
+
+        if (card.category === 'LYAP') {
+          const target = chooseLyapTarget(G, playerID);
+          if (!target) continue;
+          applyCardEffectsSoft(G, target, card.effects);
+          syncPlayerState(G, target);
+        } else if (card.category === 'SCANDAL') {
+          allPlayerIDs.filter((pid) => pid !== playerID).forEach((pid) => {
+            applyCardEffectsSoft(G, pid, card.effects);
+            syncPlayerState(G, pid);
+          });
+        } else if (card.category === 'DECISION') {
+          allPlayerIDs.forEach((pid) => {
+            applyCardEffectsSoft(G, pid, card.effects);
+            syncPlayerState(G, pid);
+          });
+        } else {
+          const replacement = buildReplacementPlan(G.resources[playerID], card.effects);
+          if (replacement === null) continue;
+          try {
+            const ok = applyCardEffects(G, playerID, card.effects, replacement);
+            if (!ok) continue;
+          } catch {
+            continue;
+          }
+        }
+
+        hand.splice(i, 1);
+        G.discard.push(card);
+        syncPlayerState(G, playerID);
+        played = true;
+        break;
+      }
+
+      if (!played) {
+        passes += 1;
+      }
+    } else {
+      passes += 1;
+    }
+
+    turns += 1;
+    const winner = getWinner(G);
+    if (winner) {
+      return {
+        winner,
+        turns,
+        stalled: false,
+        deckDepletionTurn,
+        wonByRank: G.ranks[winner] === getTopRankId(),
+        passes,
+        reachedRanks: { ...G.ranks },
+        finalResources: Object.fromEntries(
+          Object.entries(G.resources).map(([pid, row]) => [pid, { ...row }]),
+        ) as Record<string, Record<ResourceKey, number>>,
+      };
+    }
+
+    currentIdx = (currentIdx + 1) % playerIDs.length;
+  }
+
+  const fallbackWinner = Object.entries(G.resources)
+    .sort(([, a], [, b]) => resourceKeys.reduce((sum, key) => sum + (b[key] - a[key]), 0))
+    .at(0)?.[0] ?? '0';
+
+  return {
+    winner: fallbackWinner,
+    turns: maxTurns,
+    stalled: true,
+    deckDepletionTurn,
+    wonByRank: G.ranks[fallbackWinner] === getTopRankId(),
+    passes,
+    reachedRanks: { ...G.ranks },
+    finalResources: Object.fromEntries(
+      Object.entries(G.resources).map(([pid, row]) => [pid, { ...row }]),
+    ) as Record<string, Record<ResourceKey, number>>,
+  };
+};
+
+export const runGameSimulations = (
+  players: number,
+  simulations: number,
+  maxTurns = 600,
+): SimulationReport => {
+  const clampedPlayers = Math.max(2, Math.min(6, Math.floor(players || 2)));
+  const clampedSims = Math.max(1, Math.min(5000, Math.floor(simulations || 1)));
+  const clampedMaxTurns = Math.max(20, Math.min(4000, Math.floor(maxTurns || 600)));
+  const wins: Record<string, number> = {};
+  const rankReached: Record<string, number> = {};
+  let totalTurns = 0;
+  let stalled = 0;
+  let rankWins = 0;
+  let scoreWins = 0;
+  let passesTotal = 0;
+  let deckDepletionTotal = 0;
+  let deckDepletionKnown = 0;
+  let lastGame: SimulationReport['lastGame'] = {
+    winnerPlayerID: '0',
+    winnerRankId: getActiveRanks()[0]?.id ?? 'cadet',
+    winnerResources: { time: 0, reputation: 0, discipline: 0, documents: 0, tech: 0 },
+    turns: 0,
+  };
+
+  for (let i = 0; i < clampedSims; i += 1) {
+    const result = simulateSingleMatch(clampedPlayers, clampedMaxTurns);
+    wins[result.winner] = (wins[result.winner] ?? 0) + 1;
+    totalTurns += result.turns;
+    passesTotal += result.passes;
+    if (result.stalled) stalled += 1;
+    if (result.wonByRank) rankWins += 1;
+    else scoreWins += 1;
+    if (result.deckDepletionTurn >= 0) {
+      deckDepletionTotal += result.deckDepletionTurn;
+      deckDepletionKnown += 1;
+    }
+    Object.values(result.reachedRanks).forEach((rankId) => {
+      rankReached[rankId] = (rankReached[rankId] ?? 0) + 1;
+    });
+    lastGame = {
+      winnerPlayerID: result.winner,
+      winnerRankId: result.reachedRanks[result.winner] ?? (getActiveRanks()[0]?.id ?? 'cadet'),
+      winnerResources: { ...result.finalResources[result.winner] },
+      turns: result.turns,
+    };
+  }
+
+  const seatWinRates = Array.from({ length: clampedPlayers }, (_, i) => String(i)).map((playerID) => {
+    const seatWins = wins[playerID] ?? 0;
+    return {
+      playerID,
+      wins: seatWins,
+      winRatePct: Number(((seatWins / clampedSims) * 100).toFixed(2)),
+    };
+  });
+
+  const issues: string[] = [];
+  if (stalled > 0) {
+    issues.push(
+      `Виявлено ${stalled} зациклених/довгих матчів із ${clampedSims} (ліміт ${clampedMaxTurns} ходів).`,
+    );
+  }
+  const bestSeat = [...seatWinRates].sort((a, b) => b.winRatePct - a.winRatePct)[0];
+  const worstSeat = [...seatWinRates].sort((a, b) => a.winRatePct - b.winRatePct)[0];
+  if (bestSeat && worstSeat && bestSeat.winRatePct - worstSeat.winRatePct >= 12) {
+    issues.push(
+      `Можлива перевага порядку ходу: seat ${bestSeat.playerID} (${bestSeat.winRatePct}%) vs seat ${worstSeat.playerID} (${worstSeat.winRatePct}%).`,
+    );
+  }
+  if (rankWins === 0) {
+    issues.push('У симуляціях не зафіксовано перемог через звання Генерала (можливо завеликі вимоги або замалий темп ресурсів).');
+  }
+
+  return {
+    input: {
+      players: clampedPlayers,
+      simulations: clampedSims,
+      maxTurns: clampedMaxTurns,
+    },
+    generatedAt: new Date().toISOString(),
+    summary: {
+      finished: clampedSims - stalled,
+      stalled,
+      avgTurns: Number((totalTurns / clampedSims).toFixed(2)),
+      avgDeckDepletionTurn: Number(
+        (deckDepletionKnown > 0 ? deckDepletionTotal / deckDepletionKnown : 0).toFixed(2),
+      ),
+      rankWins,
+      scoreWins,
+      avgPassesPerGame: Number((passesTotal / clampedSims).toFixed(2)),
+    },
+    seatWinRates,
+    rankReached,
+    lastGame,
+    issues,
+  };
 };
 
 export const jojGame: Game<JojGameState> = {
@@ -450,6 +1027,7 @@ export const jojGame: Game<JojGameState> = {
       discard: [],
       legendaryDeck: shuffle(sharedDeckTemplate.legendaryDeck.map(cloneCard)),
       deckBackImage: sharedDeckTemplate.deckBackImage,
+      systemMessageSeq: 0,
       playerNames: {},
       chat: [],
       players: {},
@@ -460,7 +1038,7 @@ export const jojGame: Game<JojGameState> = {
 
     players.forEach((playerID) => {
       state.hands[playerID] = [];
-      state.ranks[playerID] = 'cadet';
+      state.ranks[playerID] = getActiveRanks()[0]?.id ?? 'cadet';
       state.resources[playerID] = {
         time: 2,
         reputation: 2,
@@ -473,7 +1051,7 @@ export const jojGame: Game<JojGameState> = {
         rankId: state.ranks[playerID],
         resources: state.resources[playerID],
       };
-      state.playerNames[playerID] = `Гравець #${playerID}`;
+      state.playerNames[playerID] = '';
       drawCards(state, playerID, STARTING_HAND_SIZE);
     });
 
@@ -481,11 +1059,26 @@ export const jojGame: Game<JojGameState> = {
   },
   turn: {
     activePlayers: { currentPlayer: DRAW_STAGE },
-    onBegin: ({ G, events }) => {
-      events?.setActivePlayers({ currentPlayer: G.deck.length > 0 ? DRAW_STAGE : PLAY_STAGE });
+    onBegin: ({ G, ctx, events }) => {
+      const value: Record<string, string> = {};
+      ctx.playOrder.forEach((pid) => {
+        value[pid] = IDLE_STAGE;
+      });
+      value[ctx.currentPlayer] = G.deck.length > 0 ? DRAW_STAGE : PLAY_STAGE;
+      events?.setActivePlayers({ value });
     },
   },
   moves: {
+    syncPlayerNames: (args, names: Record<string, string>) => {
+      if (!names || typeof names !== 'object') return INVALID_MOVE;
+      Object.entries(names).forEach(([pid, value]) => {
+        if (!(pid in args.G.players)) return;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        args.G.playerNames[pid] = trimmed.slice(0, 32);
+      });
+      return undefined;
+    },
     setPlayerName: (args, name: string) => {
       const playerID = args.playerID;
       if (!playerID) return INVALID_MOVE;
@@ -519,9 +1112,10 @@ export const jojGame: Game<JojGameState> = {
         if (card.category === 'LYAP') {
           // Drawn LYAP auto-triggers on the player who drew it.
           const summary = applyCardEffectsSoft(args.G, playerID, card.effects);
+          const seq = nextSystemMessageSeq(args.G);
           appendChat(args.G, {
             type: 'system',
-            text: `⚠️ ${getPlayerLabel(args.G, playerID)} витягнув ЛЯП «${card.title}». Система посміхнулась і нарахувала: ${effectSummaryToText(summary)}.`,
+            text: buildLyapSystemMessage(seq, getPlayerLabel(args.G, playerID), card, summary),
           });
           args.G.discard.push(card);
           autoPlayed = true;
@@ -533,9 +1127,10 @@ export const jojGame: Game<JojGameState> = {
             targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
             syncPlayerState(args.G, pid);
           });
+          const seq = nextSystemMessageSeq(args.G);
           appendChat(args.G, {
             type: 'system',
-            text: `🗞️ ${getPlayerLabel(args.G, playerID)} витягнув СКАНДАЛ «${card.title}». Грянув загальний розбір польотів: ${targetSummaries.join(' | ')}.`,
+            text: buildScandalSystemMessage(seq, getPlayerLabel(args.G, playerID), card, targetSummaries),
           });
           args.G.discard.push(card);
           autoPlayed = true;
@@ -544,14 +1139,15 @@ export const jojGame: Game<JojGameState> = {
         }
       }
       syncPlayerState(args.G, playerID);
-      if (autoPlayed) {
-        args.events?.endTurn();
-      } else {
-        args.events?.setStage(PLAY_STAGE);
-      }
+      args.events?.setStage(autoPlayed ? END_STAGE : PLAY_STAGE);
       return undefined;
     },
-    playCard: (args, cardId: string, replacementResources: ResourceKey[] = []) => {
+    playCard: (
+      args,
+      cardId: string,
+      replacementResources: ResourceKey[] = [],
+      targetPlayerID?: string,
+    ) => {
       const playerID = args.playerID;
       if (!playerID || args.ctx.currentPlayer !== playerID) return INVALID_MOVE;
       if (args.ctx.activePlayers?.[playerID] !== PLAY_STAGE) return INVALID_MOVE;
@@ -561,11 +1157,80 @@ export const jojGame: Game<JojGameState> = {
       if (idx === -1) return INVALID_MOVE;
 
       const card = hand[idx];
-      try {
-        const applied = applyCardEffects(args.G, playerID, card.effects, replacementResources);
-        if (!applied) return INVALID_MOVE;
-      } catch {
-        return INVALID_MOVE;
+      const allPlayerIDs = Object.keys(args.G.players);
+      const applySoftTo = (pid: string) => {
+        const summary = applyCardEffectsSoft(args.G, pid, card.effects);
+        syncPlayerState(args.G, pid);
+        return summary;
+      };
+
+      if (card.category === 'LYAP') {
+        if (!targetPlayerID || targetPlayerID === playerID || !(targetPlayerID in args.G.players)) {
+          return INVALID_MOVE;
+        }
+        const summary = applySoftTo(targetPlayerID);
+        const seq = nextSystemMessageSeq(args.G);
+        appendChat(args.G, {
+          type: 'system',
+          text: buildPlayedLyapSystemMessage(
+            seq,
+            getPlayerLabel(args.G, playerID),
+            getPlayerLabel(args.G, targetPlayerID),
+            card,
+            summary,
+          ),
+        });
+      } else if (card.category === 'SCANDAL') {
+        const targetSummaries: string[] = [];
+        allPlayerIDs
+          .filter((pid) => pid !== playerID)
+          .forEach((pid) => {
+            const summary = applySoftTo(pid);
+            targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
+          });
+        const seq = nextSystemMessageSeq(args.G);
+        appendChat(args.G, {
+          type: 'system',
+          text: buildPlayedScandalSystemMessage(seq, getPlayerLabel(args.G, playerID), card, targetSummaries),
+        });
+      } else if (card.category === 'SUPPORT') {
+        const beforeResources = { ...args.G.resources[playerID] };
+        const beforeRankId = args.G.ranks[playerID];
+        try {
+          const applied = applyCardEffects(args.G, playerID, card.effects, replacementResources);
+          if (!applied) return INVALID_MOVE;
+        } catch {
+          return INVALID_MOVE;
+        }
+        const summary = summarizeAppliedDiff(
+          beforeResources,
+          args.G.resources[playerID],
+          beforeRankId,
+          args.G.ranks[playerID],
+        );
+        const seq = nextSystemMessageSeq(args.G);
+        appendChat(args.G, {
+          type: 'system',
+          text: buildSupportSystemMessage(seq, getPlayerLabel(args.G, playerID), card, summary),
+        });
+      } else if (card.category === 'DECISION') {
+        const targetSummaries: string[] = [];
+        allPlayerIDs.forEach((pid) => {
+          const summary = applySoftTo(pid);
+          targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
+        });
+        const seq = nextSystemMessageSeq(args.G);
+        appendChat(args.G, {
+          type: 'system',
+          text: buildPlayedDecisionSystemMessage(seq, getPlayerLabel(args.G, playerID), card, targetSummaries),
+        });
+      } else {
+        try {
+          const applied = applyCardEffects(args.G, playerID, card.effects, replacementResources);
+          if (!applied) return INVALID_MOVE;
+        } catch {
+          return INVALID_MOVE;
+        }
       }
 
       hand.splice(idx, 1);
@@ -577,7 +1242,7 @@ export const jojGame: Game<JojGameState> = {
       }
 
       syncPlayerState(args.G, playerID);
-      args.events?.endTurn();
+      args.events?.setStage(END_STAGE);
       return undefined;
     },
     promote: (args) => {
@@ -590,7 +1255,7 @@ export const jojGame: Game<JojGameState> = {
     pass: (args) => {
       const playerID = args.playerID;
       if (!playerID || args.ctx.currentPlayer !== playerID) return INVALID_MOVE;
-      if (args.ctx.activePlayers?.[playerID] !== PLAY_STAGE) return INVALID_MOVE;
+      if (![PLAY_STAGE, END_STAGE].includes(args.ctx.activePlayers?.[playerID] as string)) return INVALID_MOVE;
       args.events?.endTurn();
       return undefined;
     },
@@ -607,6 +1272,9 @@ export const jojGame: Game<JojGameState> = {
       const stage = ctx.activePlayers?.[currentPlayer];
       if (stage === DRAW_STAGE) {
         return [{ move: 'drawCard' as const }];
+      }
+      if (stage === END_STAGE) {
+        return [{ move: 'pass' as const }];
       }
       return [
         ...hand.map((card) => ({ move: 'playCard' as const, args: [card.id] })),

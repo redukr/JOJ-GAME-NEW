@@ -2,18 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { LobbyClient } from 'boardgame.io/client';
 import { Client } from 'boardgame.io/react';
 import { SocketIO } from 'boardgame.io/multiplayer';
-import type { CardDefinition } from '../game/types';
+import type { CardDefinition, RankDefinition } from '../game/types';
 import {
   addCustomCardToSharedDeckTemplate,
   addCardToSharedDeckTemplate,
   type DeckTarget,
   exportSharedDeckTemplateJson,
   getCardCatalog,
+  getSharedRanks,
   getSharedDeckTemplate,
   getSharedDeckTemplateStats,
   importSharedDeckTemplateJson,
   jojGame,
   removeCardAtFromSharedDeckTemplate,
+  runGameSimulations,
+  setSharedRanks,
+  resetSharedRanks,
   resetSharedDeckTemplate,
   setSharedDeckBackImage,
   shuffleSharedDeckTemplate,
@@ -41,7 +45,10 @@ const SHARED_TEMPLATE_STORAGE_KEY = 'joj-shared-deck-template-v1';
 const PLAYER_NAME_STORAGE_KEY = 'joj-player-name-v1';
 const SESSION_STORAGE_KEY = 'joj-network-session-v1';
 const TEMPLATE_API = `${SERVER_URL}/api/shared-deck-template`;
+const RANKS_STORAGE_KEY = 'joj-shared-ranks-v1';
+const RANKS_API = `${SERVER_URL}/api/shared-ranks`;
 const ADMIN_RESTART_API = `${SERVER_URL}/api/admin/restart`;
+const ADMIN_MATCH_STATE_API = `${SERVER_URL}/api/admin/match-state`;
 
 type LobbyPlayer = {
   id: number;
@@ -57,6 +64,12 @@ type SharedDeckTemplate = {
   deck: CardDefinition[];
   legendaryDeck: CardDefinition[];
   deckBackImage?: string;
+};
+
+type Snapshot = {
+  G: unknown;
+  ctx: unknown;
+  updatedAt: number;
 };
 
 type Session = {
@@ -99,10 +112,12 @@ export const App = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [matchesSynced, setMatchesSynced] = useState<boolean>(false);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
 
   const [, setSharedDeckVersion] = useState<number>(0);
   const [sharedDeckTemplate, setSharedDeckTemplate] = useState<SharedDeckTemplate>(getSharedDeckTemplate);
   const [cardCatalog, setCardCatalog] = useState<CardDefinition[]>(getCardCatalog);
+  const [sharedRanks, setSharedRanksState] = useState<RankDefinition[]>(getSharedRanks);
 
   const t = text(lang);
   const sharedDeckStats = getSharedDeckTemplateStats();
@@ -121,6 +136,19 @@ export const App = () => {
     }
   };
 
+  const syncRanksToServer = async (ranks: RankDefinition[]) => {
+    try {
+      const response = await fetch(RANKS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ranks }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   const loadTemplateFromServer = async (): Promise<boolean> => {
     try {
       const response = await fetch(TEMPLATE_API);
@@ -133,6 +161,21 @@ export const App = () => {
       setCardCatalog(getCardCatalog());
       window.localStorage.setItem(SHARED_TEMPLATE_STORAGE_KEY, exportSharedDeckTemplateJson());
       setSharedDeckVersion((v) => v + 1);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const loadRanksFromServer = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(RANKS_API);
+      if (!response.ok) return false;
+      const payload = (await response.json()) as { ranks?: RankDefinition[] };
+      if (!Array.isArray(payload.ranks)) return false;
+      if (!setSharedRanks(payload.ranks)) return false;
+      setSharedRanksState(getSharedRanks());
+      window.localStorage.setItem(RANKS_STORAGE_KEY, JSON.stringify(getSharedRanks()));
       return true;
     } catch {
       return false;
@@ -254,6 +297,15 @@ export const App = () => {
     () => matches.find((match) => match.matchID === session?.matchID) ?? null,
     [matches, session?.matchID],
   );
+  const adminMatchID = useMemo(() => session?.matchID ?? matches[0]?.matchID ?? '', [matches, session?.matchID]);
+  const roomPlayerNames = useMemo<Record<string, string>>(() => {
+    if (!activeMatch) return {};
+    return activeMatch.players.reduce<Record<string, string>>((acc, player) => {
+      const name = player.name?.trim();
+      if (name) acc[String(player.id)] = name;
+      return acc;
+    }, {});
+  }, [activeMatch]);
 
   const canStart = Boolean(activeMatch && activeMatch.players.every((player) => Boolean(player.name)));
   const sessionBroken = Boolean(session && matchesSynced && !activeMatch && !loading);
@@ -267,6 +319,20 @@ export const App = () => {
           const result = importSharedDeckTemplateJson(saved);
           if (result.ok) {
             refreshSharedDeckTemplate(false);
+          }
+        }
+      }
+      const loadedRanksFromServer = await loadRanksFromServer();
+      if (!loadedRanksFromServer) {
+        const saved = window.localStorage.getItem(RANKS_STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved) as RankDefinition[];
+            if (setSharedRanks(parsed)) {
+              setSharedRanksState(getSharedRanks());
+            }
+          } catch {
+            // ignore
           }
         }
       }
@@ -286,6 +352,46 @@ export const App = () => {
     setSession(null);
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
   }, [sessionBroken]);
+
+  useEffect(() => {
+    if (!isAdminRoute) return;
+    if (!adminMatchID) {
+      setSnapshot(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSnapshot = async () => {
+      try {
+        const response = await fetch(`${ADMIN_MATCH_STATE_API}?matchID=${encodeURIComponent(adminMatchID)}`);
+        if (!response.ok) {
+          if (!cancelled) setSnapshot(null);
+          return;
+        }
+        const payload = (await response.json()) as {
+          snapshot?: { G: unknown; ctx: unknown; updatedAt?: number };
+        };
+        if (!cancelled && payload.snapshot) {
+          setSnapshot({
+            G: payload.snapshot.G,
+            ctx: payload.snapshot.ctx,
+            updatedAt: payload.snapshot.updatedAt ?? Date.now(),
+          });
+        }
+      } catch {
+        if (!cancelled) setSnapshot(null);
+      }
+    };
+
+    void fetchSnapshot();
+    const timer = window.setInterval(() => {
+      void fetchSnapshot();
+    }, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [adminMatchID, isAdminRoute]);
 
   useEffect(() => {
     window.localStorage.setItem('joj-lang', lang);
@@ -392,6 +498,8 @@ export const App = () => {
             credentials={session.credentials}
             lang={lang}
             playerName={playerName}
+            knownPlayerNames={roomPlayerNames}
+            sharedRanks={sharedRanks}
           />
         ) : null}
       </div>
@@ -400,9 +508,8 @@ export const App = () => {
         <AdminPage
           lang={lang}
           matches={matches.map((m) => ({ id: m.matchID, createdAt: Date.now() }))}
-          activeMatchId={session?.matchID ?? ''}
-          playerID={session?.playerID ?? '0'}
-          snapshot={null}
+          activeMatchId={adminMatchID}
+          snapshot={snapshot}
           deckStats={{
             deck: sharedDeckStats.deck,
             discard: 0,
@@ -428,10 +535,6 @@ export const App = () => {
             } catch {
               return false;
             }
-          }}
-          onPlayerChange={(next) => {
-            if (!session) return;
-            setSession({ ...session, playerID: next });
           }}
           onShuffleDeck={() => {
             shuffleSharedDeckTemplate();
@@ -468,6 +571,26 @@ export const App = () => {
             refreshSharedDeckTemplate();
             return null;
           }}
+          sharedRanks={sharedRanks}
+          onUpdateRanks={(nextRanks: RankDefinition[]) => {
+            const ok = setSharedRanks(nextRanks);
+            if (!ok) return false;
+            const normalized = getSharedRanks();
+            setSharedRanksState(normalized);
+            window.localStorage.setItem(RANKS_STORAGE_KEY, JSON.stringify(normalized));
+            void syncRanksToServer(normalized);
+            return true;
+          }}
+          onResetRanks={() => {
+            resetSharedRanks();
+            const normalized = getSharedRanks();
+            setSharedRanksState(normalized);
+            window.localStorage.setItem(RANKS_STORAGE_KEY, JSON.stringify(normalized));
+            void fetch(`${RANKS_API}/reset`, { method: 'POST' });
+          }}
+          onRunSimulations={(players: number, simulations: number) =>
+            runGameSimulations(players, simulations)
+          }
         />
       ) : null}
     </main>

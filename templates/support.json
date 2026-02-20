@@ -1,0 +1,259 @@
+{
+  "deck": [
+    {
+      "id": "support-01",
+      "title": "Моральна підтримка",
+      "category": "SUPPORT",
+      "image": "/cards/support-01.png",
+      "effects": [{ "resource": "discipline", "value": 1 }],
+      "flavor": "Слова “тримайся” офіційно визнані методом лікування."
+    },
+    {
+      "id": "support-02",
+      "title": "Кавопауза",
+      "category": "SUPPORT",
+      "image": "/cards/support-02.png",
+      "effects": [
+        { "resource": "time", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "Кава — паливо у системі мотивації."
+    },
+    {
+      "id": "support-03",
+      "title": "Психологічний тренінг",
+      "category": "SUPPORT",
+      "image": "/cards/support-03.png",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "reputation", "value": 1 }
+      ],
+      "flavor": "Тепер навіть стрес пише рапорт перед приходом."
+    },
+    {
+      "id": "support-04",
+      "title": "Виховна година",
+      "category": "SUPPORT",
+      "image": "/cards/support-04.png",
+      "effects": [{ "resource": "reputation", "value": 1 }],
+      "flavor": "Коли командир говорить — мораль росте."
+    },
+    {
+      "id": "support-05",
+      "title": "Спільна вечеря",
+      "category": "SUPPORT",
+      "image": "/cards/support-05.png",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "documents", "value": 1 }
+      ],
+      "flavor": "Навіть борщ підписаний начальником чергування."
+    },
+    {
+      "id": "support-06",
+      "title": "Лікарська довідка",
+      "category": "SUPPORT",
+      "image": "/cards/support-06.png",
+      "effects": [{ "resource": "documents", "value": 1 }],
+      "flavor": "Підстава для вихідного — найкраща мотивація."
+    },
+    {
+      "id": "support-07",
+      "title": "Підміна чергового",
+      "category": "SUPPORT",
+      "image": "/cards/support-07.png",
+      "effects": [{ "resource": "reputation", "value": 1 }],
+      "flavor": "Героїзм починається з фрази “я постою замість тебе.”"
+    },
+    {
+      "id": "support-08",
+      "title": "Бойове братерство",
+      "category": "SUPPORT",
+      "image": "/cards/support-08.png",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "Довіра — найкраща зброя проти хаосу."
+    },
+    {
+      "id": "support-09",
+      "title": "Військовий капелан",
+      "category": "SUPPORT",
+      "image": "/cards/support-09.png",
+      "effects": [{ "resource": "discipline", "value": 1 }],
+      "flavor": "Навіть рапорт читається з благословенням."
+    },
+    {
+      "id": "support-10",
+      "title": "Порада від старшини",
+      "category": "SUPPORT",
+      "image": "/cards/support-10.png",
+      "effects": [{ "resource": "reputation", "value": 1 }],
+      "flavor": "Просто роби, як я кажу, і будеш як я."
+    },
+    {
+      "id": "support-11",
+      "title": "Відновлення документів",
+      "category": "SUPPORT",
+      "image": "/cards/support-11.png",
+      "effects": [{ "resource": "documents", "value": 2 }],
+      "flavor": "Усе загублене знайдено у резервній папці."
+    },
+    {
+      "id": "support-12",
+      "title": "Сміх у строю",
+      "category": "SUPPORT",
+      "image": "/cards/support-12.png",
+      "effects": [{ "resource": "reputation", "value": 1 }],
+      "flavor": "Сміх подовжує строк служби."
+    },
+    {
+      "id": "support-13",
+      "title": "Психологічна розрядка",
+      "category": "SUPPORT",
+      "image": "/cards/support-13.png",
+      "effects": [
+        { "resource": "time", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "Після крику в подушку все стає ясніше."
+    },
+    {
+      "id": "support-14",
+      "title": "Діловод з досвідом",
+      "category": "SUPPORT",
+      "image": "/cards/support-14.png",
+      "effects": [
+        { "resource": "documents", "value": 1 },
+        { "resource": "time", "value": 1 }
+      ],
+      "flavor": "Оформить навіть думку начальника."
+    },
+    {
+      "id": "support-15",
+      "title": "Аудит реальності",
+      "category": "SUPPORT",
+      "image": "/cards/support-15.png",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "documents", "value": 1 }
+      ],
+      "flavor": "Виявлено відсутність здорового глузду. Задокументовано."
+    },
+    {
+      "id": "support-16",
+      "title": "Перерозподіл завдань",
+      "category": "SUPPORT",
+      "image": "/cards/support-16.png",
+      "effects": [{ "resource": "time", "value": 1 }],
+      "flavor": "Тепер хаос має чергового відповідального."
+    },
+    {
+      "id": "support-17",
+      "title": "Волонтерська допомога",
+      "category": "SUPPORT",
+      "image": "/cards/support-17.png",
+      "effects": [
+        { "resource": "documents", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Коли все згоріло — волонтери вже в дорозі."
+    },
+    {
+      "id": "support-18",
+      "title": "Командирський обхід",
+      "category": "SUPPORT",
+      "image": "/cards/support-18.png",
+      "effects": [{ "resource": "discipline", "value": 1 }],
+      "flavor": "Головне — не зустріти командира між обходами."
+    },
+    {
+      "id": "support-19",
+      "title": "Звіт за зразком НАТО",
+      "category": "SUPPORT",
+      "image": "/cards/support-19.png",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "documents", "value": 1 }
+      ],
+      "flavor": "Половину не зрозумів, але виглядає професійно."
+    },
+    {
+      "id": "support-20",
+      "title": "Підпис у три примірники",
+      "category": "SUPPORT",
+      "image": "/cards/support-20.png",
+      "effects": [{ "resource": "discipline", "value": 1 }],
+      "flavor": "Наказ, копія, дублікат — триєдність бюрократії."
+    },
+    {
+      "id": "support-21",
+      "title": "Залучення резерву часу",
+      "category": "SUPPORT",
+      "image": "/cards/support-21.png",
+      "effects": [{ "resource": "time", "value": 2 }],
+      "flavor": "Знайшли годину між нарадами."
+    },
+    {
+      "id": "support-22",
+      "title": "Оптимізація звітності",
+      "category": "SUPPORT",
+      "image": "/cards/support-22.png",
+      "effects": [
+        { "resource": "time", "value": 1 },
+        { "resource": "documents", "value": 1 }
+      ],
+      "flavor": "Скорочено звіти на 20 %. Збільшено їх кількість удвічі."
+    },
+    {
+      "id": "support-23",
+      "title": "Внутрішній аудит документів",
+      "category": "SUPPORT",
+      "image": "/cards/support-23.png",
+      "effects": [{ "resource": "documents", "value": 2 }],
+      "flavor": "Документи впорядковано так, що тепер їх не знайдеш."
+    },
+    {
+      "id": "support-24",
+      "title": "Звіт до звіту про звіт",
+      "category": "SUPPORT",
+      "image": "/cards/support-24.png",
+      "effects": [
+        { "resource": "documents", "value": 1 },
+        { "resource": "time", "value": -1 }
+      ],
+      "flavor": "Рівень контролю: ∞."
+    },
+    {
+      "id": "support-25",
+      "title": "Позапланове ААR",
+      "category": "SUPPORT",
+      "image": "/cards/support-25.png",
+      "effects": [
+        { "resource": "reputation", "value": 2 },
+        { "resource": "time", "value": -1 }
+      ],
+      "flavor": "Після аналізу зрозуміли, що аналіз зайняв усе вікно."
+    },
+    {
+      "id": "support-26",
+      "title": "Польове налагодження Excel",
+      "category": "SUPPORT",
+      "image": "/cards/support-26.png",
+      "effects": [{ "resource": "tech", "value": 1 }],
+      "flavor": "Таблиця перемогла людський фактор."
+    },
+    {
+      "id": "support-27",
+      "title": "Контрольний збір рапортів",
+      "category": "SUPPORT",
+      "image": "/cards/support-27.png",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "reputation", "value": 1 }
+      ],
+      "flavor": "Тепер усі рапорти на місці, але ніхто не знає де."
+    }
+  ]
+}

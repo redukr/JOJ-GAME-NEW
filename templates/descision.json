@@ -1,0 +1,247 @@
+[
+  {
+    "id": "decision-01",
+    "title": "Зразковий рапорт",
+    "category": "DECISION",
+    "image": "/cards/decision-01.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "discipline", "value": 1 }
+    ],
+    "flavor": "Писав три дні, затвердили за п’ять хвилин."
+  },
+  {
+    "id": "decision-02",
+    "title": "Вдалий виступ на шикуванні",
+    "category": "DECISION",
+    "image": "/cards/decision-02.png",
+    "effects": [{ "resource": "reputation", "value": 2 }],
+    "flavor": "Голос тремтів, але аплодували стоячи."
+  },
+  {
+    "id": "decision-03",
+    "title": "Перемога у спортивних змаганнях",
+    "category": "DECISION",
+    "image": "/cards/decision-03.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "time", "value": 1 }
+    ],
+    "flavor": "Біг швидше за накази."
+  },
+  {
+    "id": "decision-04",
+    "title": "Успішний ААR",
+    "category": "DECISION",
+    "image": "/cards/decision-04.png",
+    "effects": [
+      { "resource": "documents", "value": 2 },
+      { "resource": "reputation", "value": 1 }
+    ],
+    "flavor": "Помилки знайшли, винних — теж."
+  },
+  {
+    "id": "decision-05",
+    "title": "Волонтерська ініціатива",
+    "category": "DECISION",
+    "image": "/cards/decision-05.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "tech", "value": 1 }
+    ],
+    "flavor": "Авторитет росте швидше, ніж принтер друкує."
+  },
+  {
+    "id": "decision-06",
+    "title": "Публікація у військовому журналі",
+    "category": "DECISION",
+    "image": "/cards/decision-06.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "documents", "value": 1 }
+    ],
+    "flavor": "Твій досвід тепер у бібліотеці Міноборони."
+  },
+  {
+    "id": "decision-07",
+    "title": "Прийняття на курс лідерства",
+    "category": "DECISION",
+    "image": "/cards/decision-07.png",
+    "effects": [
+      { "resource": "discipline", "value": 1 },
+      { "resource": "reputation", "value": 1 }
+    ],
+    "flavor": "Після лекцій навіть командир став слухнянішим."
+  },
+  {
+    "id": "decision-08",
+    "title": "Затвердження нового SOP",
+    "category": "DECISION",
+    "image": "/cards/decision-08.png",
+    "effects": [
+      { "resource": "discipline", "value": 1 },
+      { "resource": "documents", "value": 1 }
+    ],
+    "flavor": "Порядок встановлено. Тимчасово."
+  },
+  {
+    "id": "decision-09",
+    "title": "Участь у навчаннях НАТО",
+    "category": "DECISION",
+    "image": "/cards/decision-09.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "tech", "value": 1 }
+    ],
+    "flavor": "Справжня перемога — знайти перекладача."
+  },
+  {
+    "id": "decision-10",
+    "title": "Ефективне використання ресурсів",
+    "category": "DECISION",
+    "image": "/cards/decision-10.png",
+    "effects": [
+      { "resource": "time", "value": 1 },
+      { "resource": "discipline", "value": 1 }
+    ],
+    "flavor": "Скоротив витрати — збільшив звіти."
+  },
+  {
+    "id": "decision-11",
+    "title": "Вдалий брифінг перед начальством",
+    "category": "DECISION",
+    "image": "/cards/decision-11.png",
+    "effects": [
+      { "resource": "reputation", "value": 2 }
+    ],
+    "flavor": "Слайди говорили самі за себе."
+  },
+  {
+    "id": "decision-12",
+    "title": "Відмінна інвентаризація",
+    "category": "DECISION",
+    "image": "/cards/decision-12.png",
+    "effects": [
+      { "resource": "discipline", "value": 1 },
+      { "resource": "documents", "value": 1 }
+    ],
+    "flavor": "Пораховано навіть повітря в шафі."
+  },
+  {
+    "id": "decision-13",
+    "title": "Курс з кібербезпеки",
+    "category": "DECISION",
+    "image": "/cards/decision-13.png",
+    "effects": [
+      { "resource": "tech", "value": 2 }
+    ],
+    "flavor": "Тепер навіть принтер не ризикує зламуватись."
+  },
+  {
+    "id": "decision-14",
+    "title": "Відзнака командира",
+    "category": "DECISION",
+    "image": "/cards/decision-14.png",
+    "effects": [
+      { "resource": "reputation", "value": 2 }
+    ],
+    "flavor": "Підписав грамоту без єдиної помилки."
+  },
+  {
+    "id": "decision-15",
+    "title": "Призначення на нову посаду",
+    "category": "DECISION",
+    "image": "/cards/decision-15.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "discipline", "value": 1 }
+    ],
+    "flavor": "Більше відповідальності, менше вихідних."
+  },
+  {
+    "id": "decision-16",
+    "title": "Успішний аудит холодильника",
+    "category": "DECISION",
+    "image": "/cards/decision-16.png",
+    "effects": [
+      { "resource": "documents", "value": 1 },
+      { "resource": "discipline", "value": 1 }
+    ],
+    "flavor": "Вперше все зійшлося — навіть списане."
+  },
+  {
+    "id": "decision-17",
+    "title": "Підтримка волонтерів",
+    "category": "DECISION",
+    "image": "/cards/decision-17.png",
+    "effects": [
+      { "resource": "tech", "value": 1 },
+      { "resource": "reputation", "value": 1 }
+    ],
+    "flavor": "Замість наказу — подяка у Facebook."
+  },
+  {
+    "id": "decision-18",
+    "title": "Вдале інтерв’ю для преси",
+    "category": "DECISION",
+    "image": "/cards/decision-18.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 }
+    ],
+    "flavor": "Головне — щоб начальство не читало."
+  },
+  {
+    "id": "decision-19",
+    "title": "Успішна сертифікація підрозділу",
+    "category": "DECISION",
+    "image": "/cards/decision-19.png",
+    "effects": [
+      { "resource": "discipline", "value": 2 }
+    ],
+    "flavor": "Всі стояли рівно. Навіть документи."
+  },
+  {
+    "id": "decision-20",
+    "title": "Покращення побутових умов",
+    "category": "DECISION",
+    "image": "/cards/decision-20.png",
+    "effects": [
+      { "resource": "time", "value": 1 },
+      { "resource": "reputation", "value": 1 }
+    ],
+    "flavor": "Справжня розкіш — гаряча вода й порядок у журналах."
+  },
+  {
+    "id": "decision-21",
+    "title": "Перенесення термінів",
+    "category": "DECISION",
+    "image": "/cards/decision-21.png",
+    "effects": [
+      { "resource": "documents", "value": 1 },
+      { "resource": "time", "value": 1 }
+    ],
+    "flavor": "Приїхали, побачили, написали акт."
+  },
+  {
+    "id": "decision-22",
+    "title": "Ротація командирів",
+    "category": "DECISION",
+    "image": "/cards/decision-22.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "discipline", "value": 1 }
+    ],
+    "flavor": "Ніхто не знає, хто головний, але всі при ділі."
+  },
+  {
+    "id": "decision-23",
+    "title": "Новий наказ про реформу",
+    "category": "DECISION",
+    "image": "/cards/decision-23.png",
+    "effects": [
+      { "resource": "reputation", "value": 1 },
+      { "resource": "documents", "value": 1 }
+    ],
+    "flavor": "Змінюємо все, крім тих, хто змінює."
+  }
+]
