@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SyntheticEvent } from 'react';
 import { normalizeImagePath, type DeckTarget, type SimulationReport } from '../game/jojGame';
 import type { CardCategory, CardDefinition, EffectResource, RankDefinition, ResourceKey } from '../game/types';
-import { cardTitle, categoryLabel } from './i18n';
+import { cardTitle, categoryLabel, rankLabel } from './i18n';
 import type { Language } from './i18n';
 import { text } from './i18n';
 
@@ -181,6 +181,8 @@ export const AdminPage = ({
   onRunSimulations,
 }: AdminPageProps) => {
   const t = text(lang);
+  const localizedRankName = (rankId: string) =>
+    sharedRanks.find((row) => row.id === rankId)?.name ?? rankLabel(rankId, lang);
   const activeMatch = matches.find((m) => m.id === activeMatchId);
   const [target, setTarget] = useState<DeckTarget>('deck');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL');
@@ -223,6 +225,14 @@ export const AdminPage = ({
   const [simulationCount, setSimulationCount] = useState<number>(500);
   const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null);
   const [simulationRunning, setSimulationRunning] = useState<boolean>(false);
+  const [editableRanks, setEditableRanks] = useState<RankDefinition[]>(() =>
+    sharedRanks.map((row) => ({
+      ...row,
+      requirement: { ...row.requirement },
+      cost: { ...row.cost },
+      bonus: { ...row.bonus },
+    })),
+  );
   const [rankDraft, setRankDraft] = useState<RankDefinition>({
     id: '',
     name: '',
@@ -240,6 +250,12 @@ export const AdminPage = ({
 
   useEffect(() => {
     setRanksJson(JSON.stringify(sharedRanks, null, 2));
+    setEditableRanks(sharedRanks.map((row) => ({
+      ...row,
+      requirement: { ...row.requirement },
+      cost: { ...row.cost },
+      bonus: { ...row.bonus },
+    })));
   }, [sharedRanks]);
 
   useEffect(() => {
@@ -599,20 +615,36 @@ export const AdminPage = ({
     setEditError('');
   };
   const updateRankAt = (index: number, updater: (rank: RankDefinition) => RankDefinition) => {
-    const next = sharedRanks.map((rank, i) => (i === index ? updater({
+    setEditableRanks((prev) => prev.map((rank, i) => (i === index ? updater({
       ...rank,
       requirement: { ...rank.requirement },
       cost: { ...rank.cost },
       bonus: { ...rank.bonus },
-    }) : rank));
-    onUpdateRanks(next);
+    }) : rank)));
+    setRanksImportStatus('');
+    setRanksImportError('');
+  };
+  const saveRanks = () => {
+    const next = editableRanks.map((row) => ({
+      ...row,
+      requirement: { ...row.requirement },
+      cost: { ...row.cost },
+      bonus: { ...row.bonus },
+    }));
+    const ok = onUpdateRanks(next);
+    if (!ok) {
+      setRanksImportError(t.ranksSchemaError);
+      return;
+    }
+    setRanksImportError('');
+    setRanksImportStatus(lang === 'uk' ? 'Зміни звань збережено.' : 'Rank changes saved.');
   };
   const addRank = () => {
     const id = rankDraft.id.trim();
     const name = rankDraft.name.trim();
     if (!id || !name) return;
     const next: RankDefinition[] = [
-      ...sharedRanks.map((row) => ({
+      ...editableRanks.map((row) => ({
         ...row,
         requirement: { ...row.requirement },
         cost: { ...row.cost },
@@ -626,17 +658,19 @@ export const AdminPage = ({
         bonus: { ...rankDraft.bonus },
       },
     ];
-    const ok = onUpdateRanks(next);
-    if (!ok) return;
+    setEditableRanks(next);
+    setRanksImportStatus('');
+    setRanksImportError('');
     setRankDraft({ id: '', name: '', requirement: {}, cost: {}, bonus: {} });
   };
   const removeRankAt = (index: number) => {
-    if (sharedRanks.length <= 1) return;
-    const next = sharedRanks.filter((_, i) => i !== index);
-    onUpdateRanks(next);
+    if (editableRanks.length <= 1) return;
+    setEditableRanks((prev) => prev.filter((_, i) => i !== index));
+    setRanksImportStatus('');
+    setRanksImportError('');
   };
   const exportRanksToFile = () => {
-    const json = JSON.stringify(sharedRanks, null, 2);
+    const json = JSON.stringify(editableRanks, null, 2);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -1110,11 +1144,12 @@ export const AdminPage = ({
         <>
           <h3>{t.ranksTitle}</h3>
           <p>{t.ranksHint}</p>
+          <h4>{t.ranksImportExportTitle}</h4>
           <p className="admin-controls">
-            <button type="button" onClick={exportRanksToFile}>{t.exportJson}</button>
-            <button type="button" onClick={importRanks}>{t.importJson}</button>
+            <button type="button" onClick={exportRanksToFile}>{t.ranksExportJson}</button>
+            <button type="button" onClick={importRanks}>{t.ranksImportJson}</button>
             <label>
-              {t.importFile}
+              {t.ranksImportFile}
               <input type="file" accept="application/json,.json" onChange={(e) => importRanksFromFile(e.target.files?.[0] ?? null)} />
             </label>
           </p>
@@ -1131,7 +1166,7 @@ export const AdminPage = ({
           />
           <div className="admin-deck-list">
             <ul>
-              {sharedRanks.map((rank, index) => (
+              {editableRanks.map((rank, index) => (
                 <li key={`rank-${rank.id}-${index}`}>
                   <div className="admin-inline-editor">
                     <div className="admin-editor-grid">
@@ -1201,7 +1236,7 @@ export const AdminPage = ({
                       ))}
                     </div>
                     <p className="admin-controls">
-                      <button type="button" onClick={() => removeRankAt(index)} disabled={sharedRanks.length <= 1}>
+                      <button type="button" onClick={() => removeRankAt(index)} disabled={editableRanks.length <= 1}>
                         {t.removeCard}
                       </button>
                     </p>
@@ -1274,6 +1309,7 @@ export const AdminPage = ({
               ))}
             </div>
             <p className="admin-controls">
+              <button type="button" onClick={saveRanks}>{t.saveRanks}</button>
               <button type="button" onClick={addRank}>{t.addRank}</button>
               <button type="button" onClick={onResetRanks}>{t.resetRanks}</button>
             </p>
@@ -1345,18 +1381,37 @@ export const AdminPage = ({
               </p>
               <p>
                 {lang === 'uk'
-                  ? `Winrate за місцями: ${simulationReport.seatWinRates.map((row) => `#${Number(row.playerID) + 1} ${row.winRatePct}%`).join(' | ')}`
-                  : `Seat winrate: ${simulationReport.seatWinRates.map((row) => `#${Number(row.playerID) + 1} ${row.winRatePct}%`).join(' | ')}`}
+                  ? `Топ-3 звань за найбільшим відсотком досягнення: ${
+                    simulationReport.topReachedRanksByPct.length
+                      ? simulationReport.topReachedRanksByPct
+                        .map((row) => `${localizedRankName(row.rankId)} — ${row.pct}% (${row.games}/${simulationReport.input.simulations})`)
+                        .join(' | ')
+                      : 'немає даних'
+                  }.`
+                  : `Top-3 most reached ranks by percentage: ${
+                    simulationReport.topReachedRanksByPct.length
+                      ? simulationReport.topReachedRanksByPct
+                        .map((row) => `${localizedRankName(row.rankId)} - ${row.pct}% (${row.games}/${simulationReport.input.simulations})`)
+                        .join(' | ')
+                      : 'no data'
+                  }.`}
               </p>
               <p>
                 {lang === 'uk'
-                  ? `Переміг гравець №${Number(simulationReport.lastGame.winnerPlayerID) + 1}.`
-                  : `Winner: player #${Number(simulationReport.lastGame.winnerPlayerID) + 1}.`}
-              </p>
-              <p>
-                {lang === 'uk'
-                  ? `Досягнуте звання: ${simulationReport.lastGame.winnerRankId}.`
-                  : `Reached rank: ${simulationReport.lastGame.winnerRankId}.`}
+                  ? `Топ-3 найвищих за ієрархією звань: ${
+                    simulationReport.topReachedRanks.length
+                      ? simulationReport.topReachedRanks
+                        .map((row) => `${localizedRankName(row.rankId)} — ${row.pct}% (${row.games}/${simulationReport.input.simulations})`)
+                        .join(' | ')
+                      : 'немає даних'
+                  }.`
+                  : `Top-3 highest ranks by hierarchy: ${
+                    simulationReport.topReachedRanks.length
+                      ? simulationReport.topReachedRanks
+                        .map((row) => `${localizedRankName(row.rankId)} - ${row.pct}% (${row.games}/${simulationReport.input.simulations})`)
+                        .join(' | ')
+                      : 'no data'
+                  }.`}
               </p>
               <p>
                 {lang === 'uk'

@@ -389,6 +389,12 @@ const applyResourceDelta = (
   });
 };
 
+const clampNonNegativeResources = (resources: Record<ResourceKey, number>) => {
+  resourceKeys.forEach((key) => {
+    if (resources[key] < 0) resources[key] = 0;
+  });
+};
+
 const replacementCostUnits = (
   resources: Record<ResourceKey, number>,
   effects: CardDefinition['effects'],
@@ -413,6 +419,38 @@ const replacementCostUnits = (
     }
   });
   return needed;
+};
+
+const planReplacementResources = (
+  resources: Record<ResourceKey, number>,
+  effects: CardDefinition['effects'],
+): ResourceKey[] | null => {
+  if (!effects?.length) return [];
+  const virtual = { ...resources };
+  const replacements: ResourceKey[] = [];
+
+  for (const effect of effects) {
+    if (effect.resource === 'rank' || effect.value >= 0) continue;
+    let required = Math.abs(effect.value);
+    const available = Math.max(0, virtual[effect.resource]);
+    const direct = Math.min(available, required);
+    virtual[effect.resource] -= direct;
+    required -= direct;
+
+    while (required > 0) {
+      for (let i = 0; i < 2; i += 1) {
+        const pick = [...resourceKeys]
+          .sort((a, b) => virtual[b] - virtual[a])
+          .find((key) => virtual[key] > 0);
+        if (!pick) return null;
+        virtual[pick] -= 1;
+        replacements.push(pick);
+      }
+      required -= 1;
+    }
+  }
+
+  return replacements;
 };
 
 export const getReplacementUnitsForCard = (
@@ -474,6 +512,7 @@ const applyCardEffects = (
       shiftRank(G, playerID, effect.value);
     }
   });
+  clampNonNegativeResources(playerResources);
   return true;
 };
 
@@ -484,6 +523,25 @@ const applyCardEffectsSoft = (
 ): { resources: Partial<Record<ResourceKey, number>>; rank: number } => {
   const summary: { resources: Partial<Record<ResourceKey, number>>; rank: number } = { resources: {}, rank: 0 };
   if (!effects?.length) return summary;
+  const beforeResources = { ...G.resources[playerID] };
+  const beforeRankId = G.ranks[playerID];
+  const replacements = planReplacementResources(G.resources[playerID], effects);
+  if (replacements) {
+    try {
+      const applied = applyCardEffects(G, playerID, effects, replacements);
+      if (applied) {
+        return summarizeAppliedDiff(
+          beforeResources,
+          G.resources[playerID],
+          beforeRankId,
+          G.ranks[playerID],
+        );
+      }
+    } catch {
+      // fallback to safe clamp below
+    }
+  }
+
   const resources = G.resources[playerID];
   effects.forEach((effect) => {
     if (effect.resource === 'rank') return;
@@ -503,6 +561,7 @@ const applyCardEffectsSoft = (
       summary.rank += effect.value;
     }
   });
+  clampNonNegativeResources(resources);
   return summary;
 };
 
@@ -559,6 +618,29 @@ const categoryLabelUk = (category: CardDefinition['category']) => {
     default:
       return category;
   }
+};
+
+const rankNameById = (rankId: string): string =>
+  getActiveRanks().find((row) => row.id === rankId)?.name ?? rankId;
+
+const resourceDeltaToText = (delta: Partial<Record<ResourceKey, number>>) => {
+  const parts = resourceKeys
+    .map((key) => {
+      const value = delta[key] ?? 0;
+      if (value === 0) return null;
+      return `${resourceLabelsUk[key]} ${value > 0 ? `+${value}` : value}`;
+    })
+    .filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(', ') : 'без змін';
+};
+
+const costToDelta = (cost: Partial<Record<ResourceKey, number>>): Partial<Record<ResourceKey, number>> => {
+  const delta: Partial<Record<ResourceKey, number>> = {};
+  resourceKeys.forEach((key) => {
+    const value = cost[key] ?? 0;
+    if (value > 0) delta[key] = -value;
+  });
+  return delta;
 };
 
 const cardFlavorSnippet = (card: CardDefinition) => {
@@ -641,6 +723,21 @@ const buildPlayedDecisionSystemMessage = (
   return `🧭 [${seq}] ${sourcePlayerLabel} оголосив «${card.title}» (РІШЕННЯ КОМАНДУВАННЯ). "${flavor}". Наслідки для столу: ${targetSummaries.join(' | ')}.`;
 };
 
+const buildPromotionSystemMessage = (
+  seq: number,
+  playerLabel: string,
+  fromRankId: string,
+  toRankId: string,
+  cost: Partial<Record<ResourceKey, number>>,
+  bonus: Partial<Record<ResourceKey, number>>,
+  summary: { resources: Partial<Record<ResourceKey, number>>; rank: number },
+) => {
+  const costText = resourceDeltaToText(costToDelta(cost));
+  const bonusText = resourceDeltaToText(bonus);
+  const totalText = effectSummaryToText(summary);
+  return `🎖️ [${seq}] ${playerLabel} підвищився: ${rankNameById(fromRankId)} → ${rankNameById(toRankId)}. Вартість: ${costText}. Бонус: ${bonusText}. Підсумок: ${totalText}.`;
+};
+
 const drawCards = (G: JojGameState, playerID: string, amount: number): void => {
   for (let i = 0; i < amount; i += 1) {
     if (G.deck.length === 0) break;
@@ -678,6 +775,7 @@ const promoteRank = (G: JojGameState, playerID: string, playerCount: number): bo
   if (!hasResources(playerResources, nextRank.cost)) return false;
   spendResources(playerResources, nextRank.cost);
   applyResourceDelta(playerResources, nextRank.bonus);
+  clampNonNegativeResources(playerResources);
   G.ranks[playerID] = nextRank.id;
   syncPlayerState(G, playerID);
   return true;
@@ -721,6 +819,16 @@ export type SimulationReport = {
     winRatePct: number;
   }>;
   rankReached: Record<string, number>;
+  topReachedRanks: Array<{
+    rankId: string;
+    games: number;
+    pct: number;
+  }>;
+  topReachedRanksByPct: Array<{
+    rankId: string;
+    games: number;
+    pct: number;
+  }>;
   lastGame: {
     winnerPlayerID: string;
     winnerRankId: string;
@@ -743,34 +851,7 @@ const chooseLyapTarget = (G: JojGameState, sourcePlayerID: string): string | nul
 const buildReplacementPlan = (
   resources: Record<ResourceKey, number>,
   effects: CardDefinition['effects'],
-): ResourceKey[] | null => {
-  if (!effects?.length) return [];
-  const virtual = { ...resources };
-  const replacements: ResourceKey[] = [];
-
-  for (const effect of effects) {
-    if (effect.resource === 'rank' || effect.value >= 0) continue;
-    let required = Math.abs(effect.value);
-    const available = Math.max(0, virtual[effect.resource]);
-    const direct = Math.min(available, required);
-    virtual[effect.resource] -= direct;
-    required -= direct;
-
-    while (required > 0) {
-      for (let i = 0; i < 2; i += 1) {
-        const pick = [...resourceKeys]
-          .sort((a, b) => virtual[b] - virtual[a])
-          .find((key) => virtual[key] > 0);
-        if (!pick) return null;
-        virtual[pick] -= 1;
-        replacements.push(pick);
-      }
-      required -= 1;
-    }
-  }
-
-  return replacements;
-};
+): ResourceKey[] | null => planReplacementResources(resources, effects);
 
 const simulateSingleMatch = (
   numPlayers: number,
@@ -798,6 +879,7 @@ const simulateSingleMatch = (
     hands: {},
     ranks: {},
     resources: {},
+    promotedThisTurn: {},
   };
 
   playerIDs.forEach((pid, index) => {
@@ -806,6 +888,7 @@ const simulateSingleMatch = (
     G.resources[pid] = { time: 2, reputation: 2, discipline: 2, documents: 2, tech: 2 };
     G.players[pid] = { hand: G.hands[pid], rankId: G.ranks[pid], resources: G.resources[pid] };
     G.playerNames[pid] = `P${index + 1}`;
+    G.promotedThisTurn[pid] = false;
     drawCards(G, pid, STARTING_HAND_SIZE);
     syncPlayerState(G, pid);
   });
@@ -814,6 +897,7 @@ const simulateSingleMatch = (
   let turns = 0;
   let deckDepletionTurn = -1;
   let passes = 0;
+  const tryPromoteOnce = (pid: string) => promoteRank(G, pid, numPlayers);
 
   while (turns < maxTurns) {
     const playerID = playerIDs[currentIdx];
@@ -845,6 +929,7 @@ const simulateSingleMatch = (
     }
 
     if (stage === 'play') {
+      let promotedThisTurn = tryPromoteOnce(playerID);
       let played = false;
       for (let i = 0; i < hand.length; i += 1) {
         const card = hand[i];
@@ -879,6 +964,9 @@ const simulateSingleMatch = (
         hand.splice(i, 1);
         G.discard.push(card);
         syncPlayerState(G, playerID);
+        if (!promotedThisTurn) {
+          promotedThisTurn = tryPromoteOnce(playerID);
+        }
         played = true;
         break;
       }
@@ -945,6 +1033,7 @@ export const runGameSimulations = (
   let passesTotal = 0;
   let deckDepletionTotal = 0;
   let deckDepletionKnown = 0;
+  const highestRankReachedByGame: Record<string, number> = {};
   let lastGame: SimulationReport['lastGame'] = {
     winnerPlayerID: '0',
     winnerRankId: getActiveRanks()[0]?.id ?? 'cadet',
@@ -967,6 +1056,13 @@ export const runGameSimulations = (
     Object.values(result.reachedRanks).forEach((rankId) => {
       rankReached[rankId] = (rankReached[rankId] ?? 0) + 1;
     });
+    const activeRanks = getActiveRanks();
+    const highest = Object.values(result.reachedRanks)
+      .map((rankId) => ({ rankId, idx: activeRanks.findIndex((r) => r.id === rankId) }))
+      .sort((a, b) => b.idx - a.idx)[0];
+    if (highest?.rankId) {
+      highestRankReachedByGame[highest.rankId] = (highestRankReachedByGame[highest.rankId] ?? 0) + 1;
+    }
     lastGame = {
       winnerPlayerID: result.winner,
       winnerRankId: result.reachedRanks[result.winner] ?? (getActiveRanks()[0]?.id ?? 'cadet'),
@@ -974,6 +1070,28 @@ export const runGameSimulations = (
       turns: result.turns,
     };
   }
+
+  const activeRanks = getActiveRanks();
+  const topReachedRanks = Object.entries(highestRankReachedByGame)
+    .map(([rankId, games]) => ({
+      rankId,
+      games,
+      pct: Number(((games / clampedSims) * 100).toFixed(2)),
+      idx: activeRanks.findIndex((r) => r.id === rankId),
+    }))
+    .sort((a, b) => b.idx - a.idx || b.games - a.games)
+    .slice(0, 3)
+    .map(({ rankId, games, pct }) => ({ rankId, games, pct }));
+  const topReachedRanksByPct = Object.entries(highestRankReachedByGame)
+    .map(([rankId, games]) => ({
+      rankId,
+      games,
+      pct: Number(((games / clampedSims) * 100).toFixed(2)),
+      idx: activeRanks.findIndex((r) => r.id === rankId),
+    }))
+    .sort((a, b) => b.games - a.games || b.pct - a.pct || b.idx - a.idx)
+    .slice(0, 3)
+    .map(({ rankId, games, pct }) => ({ rankId, games, pct }));
 
   const seatWinRates = Array.from({ length: clampedPlayers }, (_, i) => String(i)).map((playerID) => {
     const seatWins = wins[playerID] ?? 0;
@@ -1021,6 +1139,8 @@ export const runGameSimulations = (
     },
     seatWinRates,
     rankReached,
+    topReachedRanks,
+    topReachedRanksByPct,
     lastGame,
     issues,
   };
@@ -1046,6 +1166,7 @@ export const jojGame: Game<JojGameState> = {
       hands: {},
       ranks: {},
       resources: {},
+      promotedThisTurn: {},
     };
 
     players.forEach((playerID) => {
@@ -1063,6 +1184,7 @@ export const jojGame: Game<JojGameState> = {
         rankId: state.ranks[playerID],
         resources: state.resources[playerID],
       };
+      state.promotedThisTurn[playerID] = false;
       state.playerNames[playerID] = '';
       drawCards(state, playerID, STARTING_HAND_SIZE);
     });
@@ -1072,6 +1194,9 @@ export const jojGame: Game<JojGameState> = {
   turn: {
     activePlayers: { currentPlayer: DRAW_STAGE },
     onBegin: ({ G, ctx, events }) => {
+      Object.keys(G.promotedThisTurn).forEach((pid) => {
+        G.promotedThisTurn[pid] = false;
+      });
       const value: Record<string, string> = {};
       ctx.playOrder.forEach((pid) => {
         value[pid] = IDLE_STAGE;
@@ -1227,10 +1352,36 @@ export const jojGame: Game<JojGameState> = {
         });
       } else if (card.category === 'DECISION') {
         const targetSummaries: string[] = [];
+        let invalidDecisionReplacement = false;
         allPlayerIDs.forEach((pid) => {
+          if (invalidDecisionReplacement) return;
+          if (pid === playerID) {
+            const beforeResources = { ...args.G.resources[playerID] };
+            const beforeRankId = args.G.ranks[playerID];
+            try {
+              const applied = applyCardEffects(args.G, playerID, card.effects, replacementResources);
+              if (!applied) {
+                invalidDecisionReplacement = true;
+                return;
+              }
+            } catch {
+              invalidDecisionReplacement = true;
+              return;
+            }
+            const summary = summarizeAppliedDiff(
+              beforeResources,
+              args.G.resources[playerID],
+              beforeRankId,
+              args.G.ranks[playerID],
+            );
+            targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
+            syncPlayerState(args.G, pid);
+            return;
+          }
           const summary = applySoftTo(pid);
           targetSummaries.push(`${getPlayerLabel(args.G, pid)}: ${effectSummaryToText(summary)}`);
         });
+        if (invalidDecisionReplacement) return INVALID_MOVE;
         const seq = nextSystemMessageSeq(args.G);
         appendChat(args.G, {
           type: 'system',
@@ -1261,8 +1412,33 @@ export const jojGame: Game<JojGameState> = {
       const playerID = args.playerID;
       if (!playerID || args.ctx.currentPlayer !== playerID) return INVALID_MOVE;
       if (args.ctx.activePlayers?.[playerID] !== PLAY_STAGE) return INVALID_MOVE;
+      if (args.G.promotedThisTurn[playerID]) return INVALID_MOVE;
+      const beforeResources = { ...args.G.resources[playerID] };
+      const beforeRankId = args.G.ranks[playerID];
       const playerCount = Object.keys(args.G.players).length || Number(args.ctx.numPlayers ?? 0) || 2;
       if (!promoteRank(args.G, playerID, playerCount)) return INVALID_MOVE;
+      args.G.promotedThisTurn[playerID] = true;
+      const afterRankId = args.G.ranks[playerID];
+      const promotedRank = getActiveRanks().find((row) => row.id === afterRankId);
+      const summary = summarizeAppliedDiff(
+        beforeResources,
+        args.G.resources[playerID],
+        beforeRankId,
+        afterRankId,
+      );
+      const seq = nextSystemMessageSeq(args.G);
+      appendChat(args.G, {
+        type: 'system',
+        text: buildPromotionSystemMessage(
+          seq,
+          getPlayerLabel(args.G, playerID),
+          beforeRankId,
+          afterRankId,
+          promotedRank?.cost ?? {},
+          promotedRank?.bonus ?? {},
+          summary,
+        ),
+      });
       return undefined;
     },
     pass: (args) => {

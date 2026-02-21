@@ -55,6 +55,7 @@ export interface JOJState {
   hands: Record<string, Card[]>;
   ranks: Record<string, string>;
   resources: Record<string, Record<ResourceKey, number>>;
+  promotedThisTurn: Record<string, boolean>;
 }
 
 // Backward-compatible aliases for existing code.

@@ -240,7 +240,7 @@ export const Board = ({
             className="game-card"
             onClick={() => {
               if (!canPlay) return;
-              const requiresReplacement = !['LYAP', 'SCANDAL', 'DECISION'].includes(card.category);
+              const requiresReplacement = !['LYAP', 'SCANDAL'].includes(card.category);
               const required = requiresReplacement ? getReplacementUnitsForCard(resources, card) : 0;
               const replacements = required > 0 ? promptReplacementResources(required) : [];
               if (replacements === null) return;
