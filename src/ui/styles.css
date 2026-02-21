@@ -1,41 +1,211 @@
 :root {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #101828;
-  background: #f7f9fc;
+  color: #172133;
+  background:
+    radial-gradient(1200px 500px at 0% -10%, #e7f0ff 0%, rgba(231, 240, 255, 0) 60%),
+    radial-gradient(1000px 420px at 100% -10%, #e9fbf3 0%, rgba(233, 251, 243, 0) 60%),
+    #f4f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f7faff;
+  --line: #d4dceb;
+  --line-strong: #b7c4dd;
+  --text: #172133;
+  --text-dim: #4d5b74;
+  --primary: #1f6feb;
+  --primary-soft: #e8f0ff;
+  --shadow-soft: 0 10px 28px rgba(24, 42, 74, 0.08);
+  --radius: 14px;
 }
 
 body {
   margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+}
+
+a {
+  color: #1d4ed8;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: 0.16s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: #6e88b8;
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .app {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 14px 18px;
+  padding: 18px;
+}
+
+.app > h1 {
+  margin: 4px 0 8px;
+  letter-spacing: 0.2px;
+}
+
+.app-top-row,
+.app-link-row {
+  margin: 6px 0;
+}
+
+.user-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 14px;
 }
 
 .board {
-  background: #fff;
-  border: 1px solid #d0d5dd;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   padding: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.gallery-category-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+
+.gallery-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--surface-muted);
+  box-shadow: 0 6px 16px rgba(24, 42, 74, 0.05);
+}
+
+.gallery-card h3 {
+  margin: 6px 0;
+  font-size: 16px;
+}
+
+.gallery-card p {
+  margin: 4px 0;
+}
+
+.gallery-card-image {
+  width: 100%;
+  aspect-ratio: 352 / 540;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+}
+
+.gallery-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gallery-card-popover {
+  display: none;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: auto;
+  max-width: min(620px, 46vw);
+  max-height: 92vh;
+  padding: 6px;
+  border: 1px solid #98a2b3;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.28);
+  pointer-events: auto;
+}
+
+.gallery-card-popover img {
+  width: auto;
+  height: auto;
+  max-width: min(620px, calc(46vw - 12px));
+  max-height: calc(92vh - 12px);
+  object-fit: contain;
+}
+
+.gallery-card-image:hover .gallery-card-popover,
+.gallery-card-image:focus-within .gallery-card-popover {
+  display: block;
+}
+
+.gallery-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.rules-list {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
 }
 
 .board-layout {
   display: grid;
   grid-template-columns: minmax(0, 2.6fr) minmax(280px, 0.9fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .board-main {
   min-width: 0;
 }
 
+.board-status {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfdff, #f5f9ff);
+}
+
+.board-status p {
+  margin: 0;
+  color: var(--text-dim);
+}
+
 .board-chat {
-  border: 1px solid #d0d5dd;
-  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   padding: 10px;
-  background: #f8fafc;
+  background: #f6f9fe;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -46,10 +216,10 @@ body {
 .chat-log {
   flex: 1;
   overflow: auto;
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  padding: 6px;
+  padding: 8px;
 }
 
 .chat-log p {
@@ -81,7 +251,14 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin: 10px 0 12px;
+}
+
+.resources span {
+  border: 1px solid var(--line);
+  background: #f9fbff;
+  border-radius: 999px;
+  padding: 4px 9px;
 }
 
 .play-area {
@@ -92,10 +269,10 @@ body {
 }
 
 .pile {
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 8px;
-  background: #f8fafc;
+  background: #f8fbff;
 }
 
 .pile p {
@@ -148,9 +325,21 @@ body {
   gap: 3px;
   padding: 6px;
   border-radius: 8px;
-  border: 1px solid #98a2b3;
+  border: 1px solid var(--line-strong);
   background: #fff;
   cursor: pointer;
+  box-shadow: 0 3px 8px rgba(24, 42, 74, 0.06);
+  transition: 0.16s ease;
+}
+
+.hand button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #7b91bb;
+}
+
+.hand button:disabled,
+.game-card:disabled {
+  opacity: 1;
 }
 
 .game-card {
@@ -162,10 +351,28 @@ body {
 .game-card-media {
   width: 100%;
   aspect-ratio: 352 / 540;
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
   background: #f2f4f7;
+}
+
+.board-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.board-actions button:nth-child(1) {
+  background: var(--primary);
+  color: #fff;
+  border-color: #1a5fc7;
+}
+
+.board-actions button:nth-child(2) {
+  background: var(--primary-soft);
+  border-color: #b6ccf6;
 }
 
 .game-card-media img {
@@ -177,9 +384,9 @@ body {
 
 .game-card-popover {
   position: fixed;
-  left: 16px;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   z-index: 1000;
   display: none;
   width: auto;
@@ -190,7 +397,7 @@ body {
   border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 16px 40px rgba(16, 24, 40, 0.28);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .game-card-popover img {
@@ -233,7 +440,6 @@ body {
   }
 
   .game-card-popover {
-    left: 8px;
     max-width: 92vw;
     max-height: 86vh;
   }

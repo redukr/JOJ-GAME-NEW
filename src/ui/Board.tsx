@@ -164,18 +164,20 @@ export const Board = ({
   return (
     <section className="board board-layout">
       <div className="board-main">
-      <p>{t.currentPlayer}: {playerLabelById(ctx.currentPlayer)}</p>
-      <p>
-        {t.turnStage}:{' '}
-        {stage === 'draw'
-          ? t.stageDraw
-          : stage === 'play'
-            ? t.stagePlay
-            : stage === 'end'
-              ? t.stageEnd
-              : t.stageWaiting}
-      </p>
-      <p>{t.yourRank}: {rankName}</p>
+      <div className="board-status">
+        <p>{t.currentPlayer}: {playerLabelById(ctx.currentPlayer)}</p>
+        <p>
+          {t.turnStage}:{' '}
+          {stage === 'draw'
+            ? t.stageDraw
+            : stage === 'play'
+              ? t.stagePlay
+              : stage === 'end'
+                ? t.stageEnd
+                : t.stageWaiting}
+        </p>
+        <p>{t.yourRank}: {rankName}</p>
+      </div>
 
       <h2>{t.boardArea}</h2>
       <div className="play-area">
@@ -286,15 +288,17 @@ export const Board = ({
         })}
       </div>
 
-      <button type="button" onClick={() => moves.drawCard()} disabled={!canDraw}>
-        {t.draw}
-      </button>
-      <button type="button" onClick={() => moves.promote()} disabled={!canPlay}>
-        {t.promote}
-      </button>
-      <button type="button" onClick={() => moves.pass()} disabled={!canEndTurn}>
-        {t.endTurn}
-      </button>
+      <div className="board-actions">
+        <button type="button" onClick={() => moves.drawCard()} disabled={!canDraw}>
+          {t.draw}
+        </button>
+        <button type="button" onClick={() => moves.promote()} disabled={!canPlay}>
+          {t.promote}
+        </button>
+        <button type="button" onClick={() => moves.pass()} disabled={!canEndTurn}>
+          {t.endTurn}
+        </button>
+      </div>
 
       {ctx.gameover ? <p className="gameover">{t.winner}: {playerLabelById(String(ctx.gameover.winner ?? ''))}</p> : null}
       </div>

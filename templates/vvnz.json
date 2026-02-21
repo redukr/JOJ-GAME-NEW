@@ -1,0 +1,148 @@
+{
+  "deck": [
+    {
+      "id": "vvnz-01",
+      "title": "Національний університет оборони України імені Івана Черняховського",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-01.png",
+      "grantRank": "junior_lieutenant",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Тут навіть курсові звучать як накази."
+    },
+    {
+      "id": "vvnz-02",
+      "title": "Харківський національний університет Повітряних Сил імені Івана Кожедуба",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-02.png",
+      "grantRank": "junior_lieutenant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "У небі — як у звіті: головне не втратити лінію."
+    },
+    {
+      "id": "vvnz-03",
+      "title": "Національна академія сухопутних військ імені гетьмана Петра Сагайдачного",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-03.png",
+      "grantRank": "junior_lieutenant",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Тут формується хребет армії — і почерк рапорту."
+    },
+    {
+      "id": "vvnz-04",
+      "title": "Військова академія (м. Одеса)",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-04.png",
+      "grantRank": "junior_lieutenant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "На Півдні народжується тактика і легенди."
+    },
+    {
+      "id": "vvnz-05",
+      "title": "Національна академія Національної гвардії України",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-05.png",
+      "grantRank": "senior_master_sergeant",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "reputation", "value": 1 }
+      ],
+      "flavor": "Тут порядок — не просто слово, а режим доби."
+    },
+    {
+      "id": "vvnz-06",
+      "title": "Академія Державної прикордонної служби України імені Богдана Хмельницького",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-06.png",
+      "grantRank": "senior_master_sergeant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "Кордон починається не з лінії на мапі, а з характеру офіцера."
+    },
+    {
+      "id": "vvnz-07",
+      "title": "Військовий інститут Київського національного університету імені Тараса Шевченка",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-07.png",
+      "grantRank": "senior_master_sergeant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Магістерська з лідерства — і з трьома підписами."
+    },
+    {
+      "id": "vvnz-08",
+      "title": "Військовий інститут телекомунікацій та інформатизації імені Героїв Крут",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-08.png",
+      "grantRank": "senior_master_sergeant",
+      "effects": [
+        { "resource": "tech", "value": 1 },
+        { "resource": "reputation", "value": 1 }
+      ],
+      "flavor": "Коли мережа лягла — це значить, що курсант встав."
+    },
+    {
+      "id": "vvnz-09",
+      "title": "Інститут Військово-Морських Сил Національного університету «Одеська морська академія»",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-09.png",
+      "grantRank": "senior_sergeant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Швартуй документи, курсант, і тримай горизонт рівно."
+    },
+    {
+      "id": "vvnz-10",
+      "title": "Житомирський військовий інститут імені С. П. Корольова",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-10.png",
+      "grantRank": "senior_sergeant",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Космос починається з польового заліку."
+    },
+    {
+      "id": "vvnz-11",
+      "title": "Харківський військовий коледж сержантського складу Повітряних Сил",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-11.png",
+      "grantRank": "senior_sergeant",
+      "effects": [
+        { "resource": "discipline", "value": 1 },
+        { "resource": "tech", "value": 1 }
+      ],
+      "flavor": "Тут вчать тримати небо так само впевнено, як стрій."
+    },
+    {
+      "id": "vvnz-12",
+      "title": "Київський військовий ліцей імені Івана Богуна",
+      "category": "VVNZ",
+      "image": "/cards/vvnz-12.png",
+      "grantRank": "senior_sergeant",
+      "effects": [
+        { "resource": "reputation", "value": 1 },
+        { "resource": "discipline", "value": 1 }
+      ],
+      "flavor": "Тут мрія носить форму ще до звання."
+    }
+  ]
+}

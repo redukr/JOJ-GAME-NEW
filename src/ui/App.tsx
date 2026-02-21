@@ -14,6 +14,7 @@ import {
   getSharedDeckTemplateStats,
   importSharedDeckTemplateJson,
   jojGame,
+  normalizeImagePath,
   removeCardAtFromSharedDeckTemplate,
   runGameSimulations,
   setSharedRanks,
@@ -26,7 +27,7 @@ import {
 import { AdminPage } from './AdminPage';
 import { Board } from './Board';
 import type { Language } from './i18n';
-import { defaultLanguage, text } from './i18n';
+import { cardTitle, categoryLabel, defaultLanguage, text } from './i18n';
 
 const SERVER_URL = `http://${window.location.hostname}:8000`;
 const GAME_NAME = 'joj-game';
@@ -78,6 +79,10 @@ type Session = {
   credentials: string;
 };
 
+type UserTab = 'games' | 'gallery' | 'rules';
+type GalleryCategoryFilter = CardDefinition['category'] | 'ALL';
+const galleryCategories: CardDefinition['category'][] = ['LYAP', 'SCANDAL', 'SUPPORT', 'DECISION', 'NEUTRAL', 'VVNZ', 'LEGENDARY'];
+
 const parseSession = (raw: string | null): Session | null => {
   if (!raw) return null;
   try {
@@ -118,9 +123,19 @@ export const App = () => {
   const [sharedDeckTemplate, setSharedDeckTemplate] = useState<SharedDeckTemplate>(getSharedDeckTemplate);
   const [cardCatalog, setCardCatalog] = useState<CardDefinition[]>(getCardCatalog);
   const [sharedRanks, setSharedRanksState] = useState<RankDefinition[]>(getSharedRanks);
+  const [activeUserTab, setActiveUserTab] = useState<UserTab>('games');
+  const [galleryCategoryFilter, setGalleryCategoryFilter] = useState<GalleryCategoryFilter>('ALL');
 
   const t = text(lang);
   const sharedDeckStats = getSharedDeckTemplateStats();
+  const galleryCards = useMemo(() => (
+    [...cardCatalog]
+      .filter((card) => galleryCategoryFilter === 'ALL' || card.category === galleryCategoryFilter)
+      .sort((a, b) => a.category.localeCompare(b.category) || a.title.localeCompare(b.title))
+  ), [cardCatalog, galleryCategoryFilter]);
+  const effectLabel = (resource: 'time' | 'reputation' | 'discipline' | 'documents' | 'tech' | 'rank') =>
+    resource === 'rank' ? t.rankResource : t.resources[resource];
+  const rules = t.rulesList;
 
   const syncTemplateToServer = async (json: string) => {
     try {
@@ -406,7 +421,7 @@ export const App = () => {
   return (
     <main className="app">
       <h1>{isAdminRoute ? t.adminTitle : t.gameTitle}</h1>
-      <p>
+      <p className="app-top-row">
         {t.language}:{' '}
         <button type="button" onClick={() => setLang('uk')} disabled={lang === 'uk'}>
           {t.langUk}
@@ -415,11 +430,25 @@ export const App = () => {
           {t.langEn}
         </button>
       </p>
-      <p>
+      <p className="app-link-row">
         {isAdminRoute ? <a href="/">{t.openGame}</a> : <a href="/admin">{t.openAdmin}</a>}
       </p>
 
-      {!isAdminRoute && !session ? (
+      {!isAdminRoute ? (
+        <p className="user-tabs">
+          <button type="button" onClick={() => setActiveUserTab('games')} disabled={activeUserTab === 'games'}>
+            {t.userTabGames}
+          </button>
+          <button type="button" onClick={() => setActiveUserTab('gallery')} disabled={activeUserTab === 'gallery'}>
+            {t.userTabGallery}
+          </button>
+          <button type="button" onClick={() => setActiveUserTab('rules')} disabled={activeUserTab === 'rules'}>
+            {t.userTabRules}
+          </button>
+        </p>
+      ) : null}
+
+      {!isAdminRoute && activeUserTab === 'games' && !session ? (
         <section className="board">
           <h2>{t.lobbyTitle}</h2>
           <p>
@@ -473,7 +502,7 @@ export const App = () => {
         </section>
       ) : null}
 
-      {!isAdminRoute && session ? (
+      {!isAdminRoute && activeUserTab === 'games' && session ? (
         <section className="board">
           <h2>
             {t.activeRoom}: {session.matchID}
@@ -489,7 +518,7 @@ export const App = () => {
         </section>
       ) : null}
 
-      <div style={{ display: !isAdminRoute && session && canStart ? 'block' : 'none' }}>
+      <div style={{ display: !isAdminRoute && activeUserTab === 'games' && session && canStart ? 'block' : 'none' }}>
         {session ? (
           <NetworkClient
             key={`${session.matchID}:${session.playerID}`}
@@ -503,6 +532,76 @@ export const App = () => {
           />
         ) : null}
       </div>
+
+      {!isAdminRoute && activeUserTab === 'gallery' ? (
+        <section className="board">
+          <h2>{t.galleryTitle}</h2>
+          <p>{t.galleryDescription}</p>
+          <p className="gallery-category-tabs">
+            <button
+              type="button"
+              onClick={() => setGalleryCategoryFilter('ALL')}
+              disabled={galleryCategoryFilter === 'ALL'}
+            >
+              {t.allCategories}
+            </button>
+              {galleryCategories.map((cat) => (
+                <button
+                  type="button"
+                  key={`gallery-filter-${cat}`}
+                  onClick={() => setGalleryCategoryFilter(cat)}
+                  disabled={galleryCategoryFilter === cat}
+                >
+                  {categoryLabel(cat, lang)}
+                </button>
+              ))}
+          </p>
+          {galleryCards.length === 0 ? <p>{t.noCardsYet}</p> : null}
+          <div className="gallery-grid">
+            {galleryCards.map((card) => (
+              <article key={card.id} className="gallery-card">
+                <div className="gallery-card-image">
+                  <img
+                    src={normalizeImagePath(card.image) ?? `/cards/${card.id}.png`}
+                    alt={cardTitle(card.id, card.title, lang)}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="gallery-card-popover" aria-hidden="true">
+                    <img
+                      src={normalizeImagePath(card.image) ?? `/cards/${card.id}.png`}
+                      alt={cardTitle(card.id, card.title, lang)}
+                    />
+                  </div>
+                </div>
+                <h3>{cardTitle(card.id, card.title, lang)}</h3>
+                <p>{card.flavor ?? ''}</p>
+                <div className="gallery-effects">
+                  {(card.effects ?? []).length === 0 ? (
+                    <span className="pill pill-cost">0</span>
+                  ) : (card.effects ?? []).map((effect, idx) => (
+                    <span key={`${card.id}-effect-${idx}`} className="pill pill-effect">
+                      {effectLabel(effect.resource)}: {effect.value > 0 ? `+${effect.value}` : effect.value}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {!isAdminRoute && activeUserTab === 'rules' ? (
+        <section className="board">
+          <h2>{t.rulesTitle}</h2>
+          <ol className="rules-list">
+            {rules.map((rule, index) => (
+              <li key={`rule-${index}`}>{rule}</li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       {isAdminRoute ? (
         <AdminPage
